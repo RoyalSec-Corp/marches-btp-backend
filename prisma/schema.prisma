@@ -1,0 +1,62 @@
+// Marchés BTP - Schéma Prisma
+// Sprint 1 : Configuration initiale
+// Sprint 2 : Modèles complets
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserType {
+  FREELANCE
+  ENTREPRISE
+  APPEL_OFFRE
+  ADMIN
+}
+
+enum ContratStatus {
+  BROUILLON
+  EN_ATTENTE
+  SIGNE
+  EN_COURS
+  TERMINE
+  ANNULE
+}
+
+enum NotificationType {
+  CONTRAT
+  MESSAGE
+  APPEL_OFFRE
+  SYSTEME
+}
+
+// ============================================
+// MODÈLES - À compléter au Sprint 2
+// ============================================
+
+/// Utilisateur de base (authentification)
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  userType    UserType  @map("user_type")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations (à définir au Sprint 2)
+  // freelance      Freelance?
+  // entreprise     Entreprise?
+  // sessions       Session[]
+  // notifications  Notification[]
+
+  @@map("users")
+}
