@@ -1,0 +1,14 @@
+// ============================================
+// MarchesBTP - Configuration Prisma
+// Sprint 2 : Schema multi-fichiers
+// ============================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
