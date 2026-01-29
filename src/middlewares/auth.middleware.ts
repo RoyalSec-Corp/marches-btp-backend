@@ -1,0 +1,127 @@
+import { Request, Response, NextFunction } from 'express';
+import { authService } from '../services/auth.service.js';
+
+// Etendre le type Request pour inclure user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: number;
+        email: string;
+        userType: string;
+      };
+    }
+  }
+}
+
+/**
+ * Middleware d'authentification JWT
+ * Verifie le token dans le header Authorization
+ */
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token d\'authentification requis.',
+        error: 'MISSING_TOKEN',
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const payload = authService.verifyAccessToken(token);
+      req.user = payload;
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide ou expire.',
+        error: 'INVALID_TOKEN',
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Middleware optionnel d'authentification
+ * Ne bloque pas si pas de token, mais ajoute user si present
+ */
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const payload = authService.verifyAccessToken(token);
+        req.user = payload;
+      } catch (error) {
+        // Token invalide, on continue sans user
+      }
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Middleware de verification du type d'utilisateur
+ * @param allowedTypes - Types d'utilisateurs autorises
+ */
+export const requireUserType = (...allowedTypes: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Non authentifie.',
+        error: 'UNAUTHORIZED',
+      });
+    }
+
+    if (!allowedTypes.includes(req.user.userType)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acces non autorise pour ce type de compte.',
+        error: 'FORBIDDEN',
+      });
+    }
+
+    next();
+  };
+};
+
+/**
+ * Middleware pour les admins uniquement
+ */
+export const requireAdmin = requireUserType('ADMIN');
+
+/**
+ * Middleware pour les freelances uniquement
+ */
+export const requireFreelance = requireUserType('FREELANCE');
+
+/**
+ * Middleware pour les entreprises uniquement
+ */
+export const requireEntreprise = requireUserType('ENTREPRISE');
+
+/**
+ * Middleware pour freelances et entreprises
+ */
+export const requireFreelanceOrEntreprise = requireUserType('FREELANCE', 'ENTREPRISE');

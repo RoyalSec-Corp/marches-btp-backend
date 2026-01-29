@@ -1,62 +1,257 @@
+import { PrismaClient, UserType, StatutCompte } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
-import {
-  JwtPayload,
-  JwtTokens,
-  RegisterFreelanceDto,
-  RegisterEntrepriseDto,
-  UserResponse,
-} from '../types/auth.types.js';
-import { UserType, ModeTarification, TypePersonne } from '@prisma/client';
+import crypto from 'crypto';
 
-class AuthService {
-  // ===== GÉNÉRATION DE TOKENS =====
+const prisma = new PrismaClient();
 
-  generateTokens(payload: JwtPayload): JwtTokens {
+// Types
+export interface RegisterFreelanceDTO {
+  email: string;
+  password: string;
+  nom: string;
+  prenom: string;
+  telephone?: string;
+  metier: string;
+  tarif: number;
+  siret?: string;
+  description?: string;
+}
+
+export interface RegisterEntrepriseDTO {
+  email: string;
+  password: string;
+  raisonSociale: string;
+  siret: string;
+  telephone?: string;
+  adresse?: string;
+  ville?: string;
+  codePostal?: string;
+  representantNom: string;
+  representantPrenom: string;
+}
+
+export interface LoginDTO {
+  email: string;
+  password: string;
+}
+
+export interface TokenPayload {
+  userId: number;
+  email: string;
+  userType: UserType;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Service d'authentification
+export const authService = {
+  // Generer un code de parrainage unique
+  generateReferralCode: (): string => {
+    return crypto.randomBytes(4).toString('hex').toUpperCase();
+  },
+
+  // Hasher le mot de passe
+  hashPassword: async (password: string): Promise<string> => {
+    const rounds = env.BCRYPT_ROUNDS || 12;
+    return bcrypt.hash(password, rounds);
+  },
+
+  // Verifier le mot de passe
+  verifyPassword: async (password: string, hash: string): Promise<boolean> => {
+    return bcrypt.compare(password, hash);
+  },
+
+  // Generer les tokens JWT
+  generateTokens: (payload: TokenPayload): AuthTokens => {
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
+      expiresIn: env.JWT_EXPIRES_IN || '15m',
     });
 
     const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN || '7d',
     });
 
     return { accessToken, refreshToken };
-  }
+  },
 
-  verifyAccessToken(token: string): JwtPayload {
-    return jwt.verify(token, env.JWT_SECRET) as JwtPayload;
-  }
+  // Verifier le token d'acces
+  verifyAccessToken: (token: string): TokenPayload => {
+    return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+  },
 
-  verifyRefreshToken(token: string): JwtPayload {
-    return jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
-  }
+  // Verifier le refresh token
+  verifyRefreshToken: (token: string): TokenPayload => {
+    return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
+  },
 
-  // ===== MOT DE PASSE =====
+  // Inscription Freelance
+  registerFreelance: async (data: RegisterFreelanceDTO) => {
+    // Verifier si l'email existe deja
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
 
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, env.BCRYPT_ROUNDS);
-  }
+    if (existingUser) {
+      throw new Error('EMAIL_ALREADY_EXISTS');
+    }
 
-  async comparePassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
-  }
+    // Hasher le mot de passe
+    const hashedPassword = await authService.hashPassword(data.password);
 
-  // ===== CODE PARRAINAGE =====
+    // Generer un code de parrainage
+    const referralCode = authService.generateReferralCode();
 
-  generateReferralCode(): string {
-    return crypto.randomBytes(4).toString('hex').toUpperCase();
-  }
+    // Creer l'utilisateur et le profil freelance
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        userType: UserType.FREELANCE,
+        nom: data.nom,
+        prenom: data.prenom,
+        telephone: data.telephone,
+        referralCode,
+        freelance: {
+          create: {
+            nom: data.nom,
+            prenom: data.prenom,
+            email: data.email,
+            telephone: data.telephone,
+            metier: data.metier,
+            tarif: data.tarif,
+            siret: data.siret,
+            description: data.description,
+            statutCompte: StatutCompte.EN_ATTENTE,
+          },
+        },
+      },
+      include: {
+        freelance: true,
+      },
+    });
 
-  // ===== CONNEXION =====
+    // Generer les tokens
+    const tokens = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      userType: user.userType,
+    });
 
-  async login(email: string, password: string): Promise<{ user: UserResponse; tokens: JwtTokens }> {
+    // Creer la session
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: tokens.refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+        userAgent: 'API',
+      },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        userType: user.userType,
+        nom: user.nom,
+        prenom: user.prenom,
+        referralCode: user.referralCode,
+        freelance: user.freelance,
+      },
+      tokens,
+    };
+  },
+
+  // Inscription Entreprise
+  registerEntreprise: async (data: RegisterEntrepriseDTO) => {
+    // Verifier si l'email existe deja
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new Error('EMAIL_ALREADY_EXISTS');
+    }
+
+    // Hasher le mot de passe
+    const hashedPassword = await authService.hashPassword(data.password);
+
+    // Generer un code de parrainage
+    const referralCode = authService.generateReferralCode();
+
+    // Creer l'utilisateur et le profil entreprise
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        userType: UserType.ENTREPRISE,
+        nom: data.representantNom,
+        prenom: data.representantPrenom,
+        telephone: data.telephone,
+        adresse: data.adresse,
+        ville: data.ville,
+        codePostal: data.codePostal,
+        referralCode,
+        entreprise: {
+          create: {
+            raisonSociale: data.raisonSociale,
+            siret: data.siret,
+            email: data.email,
+            telephone: data.telephone,
+            adresse: data.adresse,
+            ville: data.ville,
+            codePostal: data.codePostal,
+            representantNom: data.representantNom,
+            representantPrenom: data.representantPrenom,
+            statutCompte: StatutCompte.EN_ATTENTE,
+          },
+        },
+      },
+      include: {
+        entreprise: true,
+      },
+    });
+
+    // Generer les tokens
+    const tokens = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      userType: user.userType,
+    });
+
+    // Creer la session
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: tokens.refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: 'API',
+      },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        userType: user.userType,
+        nom: user.nom,
+        prenom: user.prenom,
+        referralCode: user.referralCode,
+        entreprise: user.entreprise,
+      },
+      tokens,
+    };
+  },
+
+  // Connexion
+  login: async (data: LoginDTO, userAgent?: string) => {
     // Trouver l'utilisateur
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: data.email },
       include: {
         freelance: true,
         entreprise: true,
@@ -64,295 +259,108 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error('Email ou mot de passe incorrect');
+      throw new Error('INVALID_CREDENTIALS');
     }
 
-    // Vérifier le mot de passe
-    const isPasswordValid = await this.comparePassword(password, user.password);
-    if (!isPasswordValid) {
-      throw new Error('Email ou mot de passe incorrect');
-    }
-
-    // Vérifier si le compte est actif
+    // Verifier si le compte est actif
     if (!user.isActive) {
-      throw new Error('Votre compte a été désactivé');
+      throw new Error('ACCOUNT_DISABLED');
     }
 
-    // Générer les tokens
-    const payload: JwtPayload = {
+    // Verifier le mot de passe
+    const isPasswordValid = await authService.verifyPassword(data.password, user.password);
+
+    if (!isPasswordValid) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
+
+    // Generer les tokens
+    const tokens = authService.generateTokens({
       userId: user.id,
       email: user.email,
       userType: user.userType,
-    };
-    const tokens = this.generateTokens(payload);
+    });
 
-    // Créer une session
+    // Creer/Mettre a jour la session
     await prisma.session.create({
       data: {
         userId: user.id,
-        token: tokens.refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
-        userAgent: '',
-        ipAddress: '',
-      },
-    });
-
-    // Formater la réponse
-    const userResponse = this.formatUserResponse(user);
-
-    return { user: userResponse, tokens };
-  }
-
-  // ===== INSCRIPTION FREELANCE =====
-
-  async registerFreelance(data: RegisterFreelanceDto): Promise<{ user: UserResponse; tokens: JwtTokens }> {
-    // Vérifier si l'email existe déjà
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() },
-    });
-
-    if (existingUser) {
-      throw new Error('Cet email est déjà utilisé');
-    }
-
-    // Hasher le mot de passe
-    const hashedPassword = await this.hashPassword(data.password);
-
-    // Générer un code de parrainage
-    const referralCode = this.generateReferralCode();
-
-    // Créer l'utilisateur et le profil freelance en transaction
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          email: data.email.toLowerCase(),
-          password: hashedPassword,
-          userType: UserType.FREELANCE,
-          nom: data.nom,
-          prenom: data.prenom,
-          telephone: data.telephone,
-          adresse: data.adresse,
-          ville: data.ville,
-          codePostal: data.codePostal,
-          referralCode,
-        },
-      });
-
-      await tx.freelance.create({
-        data: {
-          userId: newUser.id,
-          nom: data.nom,
-          prenom: data.prenom,
-          email: data.email.toLowerCase(),
-          telephone: data.telephone,
-          metier: data.metier,
-          tarif: data.tarif,
-          modeTarification: (data.modeTarification as ModeTarification) || ModeTarification.JOUR,
-          siret: data.siret,
-          experienceYears: data.experienceYears,
-          description: data.description,
-        },
-      });
-
-      return tx.user.findUnique({
-        where: { id: newUser.id },
-        include: { freelance: true, entreprise: true },
-      });
-    });
-
-    if (!user) {
-      throw new Error('Erreur lors de la création du compte');
-    }
-
-    // Générer les tokens
-    const payload: JwtPayload = {
-      userId: user.id,
-      email: user.email,
-      userType: user.userType,
-    };
-    const tokens = this.generateTokens(payload);
-
-    // Créer une session
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: tokens.refreshToken,
+        refreshToken: tokens.refreshToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        userAgent: '',
-        ipAddress: '',
+        userAgent: userAgent || 'Unknown',
       },
     });
 
-    const userResponse = this.formatUserResponse(user);
-    return { user: userResponse, tokens };
-  }
-
-  // ===== INSCRIPTION ENTREPRISE =====
-
-  async registerEntreprise(data: RegisterEntrepriseDto): Promise<{ user: UserResponse; tokens: JwtTokens }> {
-    // Vérifier si l'email existe déjà
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() },
-    });
-
-    if (existingUser) {
-      throw new Error('Cet email est déjà utilisé');
-    }
-
-    // Vérifier si le SIRET existe déjà
-    const existingSiret = await prisma.entreprise.findUnique({
-      where: { siret: data.siret },
-    });
-
-    if (existingSiret) {
-      throw new Error('Ce SIRET est déjà enregistré');
-    }
-
-    // Hasher le mot de passe
-    const hashedPassword = await this.hashPassword(data.password);
-
-    // Générer un code de parrainage
-    const referralCode = this.generateReferralCode();
-
-    // Créer l'utilisateur et le profil entreprise en transaction
-    const user = await prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          email: data.email.toLowerCase(),
-          password: hashedPassword,
-          userType: UserType.ENTREPRISE,
-          nom: data.nomContact,
-          prenom: data.prenomContact,
-          telephone: data.telephone,
-          adresse: data.adresse,
-          ville: data.ville,
-          codePostal: data.codePostal,
-          referralCode,
-        },
-      });
-
-      await tx.entreprise.create({
-        data: {
-          userId: newUser.id,
-          raisonSociale: data.raisonSociale,
-          siret: data.siret,
-          telephone: data.telephone,
-          secteurActivite: data.secteurActivite,
-          tailleEntreprise: data.tailleEntreprise,
-          typePersonne: (data.typePersonne as TypePersonne) || TypePersonne.PROFESSIONNEL,
-          adresse: data.adresse,
-          ville: data.ville,
-          codePostal: data.codePostal,
-          nomContact: data.nomContact,
-          prenomContact: data.prenomContact,
-          emailContact: data.emailContact,
-          telephoneContact: data.telephoneContact,
-        },
-      });
-
-      return tx.user.findUnique({
-        where: { id: newUser.id },
-        include: { freelance: true, entreprise: true },
-      });
-    });
-
-    if (!user) {
-      throw new Error('Erreur lors de la création du compte');
-    }
-
-    // Générer les tokens
-    const payload: JwtPayload = {
-      userId: user.id,
-      email: user.email,
-      userType: user.userType,
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        userType: user.userType,
+        nom: user.nom,
+        prenom: user.prenom,
+        referralCode: user.referralCode,
+        freelance: user.freelance,
+        entreprise: user.entreprise,
+      },
+      tokens,
     };
-    const tokens = this.generateTokens(payload);
+  },
 
-    // Créer une session
-    await prisma.session.create({
-      data: {
-        userId: user.id,
-        token: tokens.refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        userAgent: '',
-        ipAddress: '',
-      },
+  // Deconnexion
+  logout: async (refreshToken: string) => {
+    await prisma.session.deleteMany({
+      where: { refreshToken },
     });
+  },
 
-    const userResponse = this.formatUserResponse(user);
-    return { user: userResponse, tokens };
-  }
+  // Rafraichir le token
+  refreshTokens: async (refreshToken: string) => {
+    // Verifier le refresh token
+    const payload = authService.verifyRefreshToken(refreshToken);
 
-  // ===== DÉCONNEXION =====
-
-  async logout(userId: number, refreshToken?: string): Promise<void> {
-    if (refreshToken) {
-      // Supprimer uniquement la session avec ce token
-      await prisma.session.deleteMany({
-        where: {
-          userId,
-          token: refreshToken,
-        },
-      });
-    } else {
-      // Supprimer toutes les sessions de l'utilisateur
-      await prisma.session.deleteMany({
-        where: { userId },
-      });
-    }
-  }
-
-  // ===== REFRESH TOKEN =====
-
-  async refreshTokens(refreshToken: string): Promise<JwtTokens> {
-    // Vérifier le token
-    const payload = this.verifyRefreshToken(refreshToken);
-
-    // Vérifier si la session existe
+    // Verifier que la session existe
     const session = await prisma.session.findFirst({
       where: {
+        refreshToken,
         userId: payload.userId,
-        token: refreshToken,
         expiresAt: { gt: new Date() },
       },
     });
 
     if (!session) {
-      throw new Error('Session invalide ou expirée');
+      throw new Error('SESSION_EXPIRED');
     }
 
-    // Vérifier si l'utilisateur existe toujours
+    // Recuperer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
     });
 
     if (!user || !user.isActive) {
-      throw new Error('Utilisateur non trouvé ou inactif');
+      throw new Error('USER_NOT_FOUND');
     }
 
-    // Générer de nouveaux tokens
-    const newPayload: JwtPayload = {
+    // Generer de nouveaux tokens
+    const tokens = authService.generateTokens({
       userId: user.id,
       email: user.email,
       userType: user.userType,
-    };
-    const tokens = this.generateTokens(newPayload);
+    });
 
-    // Mettre à jour la session avec le nouveau refresh token
+    // Mettre a jour la session
     await prisma.session.update({
       where: { id: session.id },
       data: {
-        token: tokens.refreshToken,
+        refreshToken: tokens.refreshToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
     return tokens;
-  }
+  },
 
-  // ===== PROFIL UTILISATEUR =====
-
-  async getProfile(userId: number): Promise<UserResponse> {
+  // Obtenir le profil utilisateur
+  getProfile: async (userId: number) => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -362,108 +370,32 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error('Utilisateur non trouvé');
+      throw new Error('USER_NOT_FOUND');
     }
 
-    return this.formatUserResponse(user);
-  }
+    // Ne pas renvoyer le mot de passe
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  },
 
-  // ===== MOT DE PASSE OUBLIÉ =====
-
-  async forgotPassword(email: string): Promise<void> {
+  // Verifier le token (pour les routes protegees)
+  verifyToken: async (userId: number) => {
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        userType: true,
+        isActive: true,
+      },
     });
 
-    if (!user) {
-      // Ne pas révéler si l'email existe ou non
-      return;
+    if (!user || !user.isActive) {
+      throw new Error('USER_NOT_FOUND');
     }
 
-    // Générer un token de réinitialisation
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
+    return user;
+  },
+};
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetToken,
-        resetTokenExpires,
-      },
-    });
-
-    // TODO: Envoyer l'email avec le lien de réinitialisation
-    console.log(`[DEV] Reset token for ${email}: ${resetToken}`);
-  }
-
-  // ===== RÉINITIALISATION DU MOT DE PASSE =====
-
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    const user = await prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpires: { gt: new Date() },
-      },
-    });
-
-    if (!user) {
-      throw new Error('Token invalide ou expiré');
-    }
-
-    // Hasher le nouveau mot de passe
-    const hashedPassword = await this.hashPassword(newPassword);
-
-    // Mettre à jour le mot de passe et supprimer le token
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpires: null,
-      },
-    });
-
-    // Supprimer toutes les sessions existantes
-    await prisma.session.deleteMany({
-      where: { userId: user.id },
-    });
-  }
-
-  // ===== FORMATER LA RÉPONSE UTILISATEUR =====
-
-  private formatUserResponse(user: any): UserResponse {
-    return {
-      id: user.id,
-      email: user.email,
-      userType: user.userType,
-      nom: user.nom,
-      prenom: user.prenom,
-      telephone: user.telephone,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      freelance: user.freelance
-        ? {
-            id: user.freelance.id,
-            nom: user.freelance.nom,
-            prenom: user.freelance.prenom,
-            metier: user.freelance.metier,
-            tarif: user.freelance.tarif,
-            modeTarification: user.freelance.modeTarification,
-            disponible: user.freelance.disponible,
-            statutCompte: user.freelance.statutCompte,
-          }
-        : null,
-      entreprise: user.entreprise
-        ? {
-            id: user.entreprise.id,
-            raisonSociale: user.entreprise.raisonSociale,
-            siret: user.entreprise.siret,
-            secteurActivite: user.entreprise.secteurActivite,
-            statutCompte: user.entreprise.statutCompte,
-          }
-        : null,
-    };
-  }
-}
-
-export const authService = new AuthService();
+export default authService;

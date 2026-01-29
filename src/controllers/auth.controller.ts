@@ -1,168 +1,189 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
-import {
-  LoginInput,
-  RegisterFreelanceInput,
-  RegisterEntrepriseInput,
-  RefreshTokenInput,
-  ForgotPasswordInput,
-  ResetPasswordInput,
-} from '../validations/auth.validation.js';
 
-class AuthController {
-  // POST /api/auth/login
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { email, password } = req.body as LoginInput;
-
-      const result = await authService.login(email, password);
-
-      res.status(200).json({
-        success: true,
-        message: 'Connexion réussie',
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
+export const authController = {
   // POST /api/auth/register/freelance
-  async registerFreelance(req: Request, res: Response, next: NextFunction): Promise<void> {
+  registerFreelance: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req.body as RegisterFreelanceInput;
-
-      const result = await authService.registerFreelance(data);
+      const result = await authService.registerFreelance(req.body);
 
       res.status(201).json({
         success: true,
-        message: 'Compte freelance créé avec succès',
+        message: 'Inscription reussie. Votre compte est en attente de validation.',
         data: result,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'EMAIL_ALREADY_EXISTS') {
+        return res.status(409).json({
+          success: false,
+          message: 'Cet email est deja utilise.',
+          error: 'EMAIL_ALREADY_EXISTS',
+        });
+      }
       next(error);
     }
-  }
+  },
 
   // POST /api/auth/register/entreprise
-  async registerEntreprise(req: Request, res: Response, next: NextFunction): Promise<void> {
+  registerEntreprise: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req.body as RegisterEntrepriseInput;
-
-      const result = await authService.registerEntreprise(data);
+      const result = await authService.registerEntreprise(req.body);
 
       res.status(201).json({
         success: true,
-        message: 'Compte entreprise créé avec succès',
+        message: 'Inscription reussie. Votre compte est en attente de validation.',
         data: result,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'EMAIL_ALREADY_EXISTS') {
+        return res.status(409).json({
+          success: false,
+          message: 'Cet email est deja utilise.',
+          error: 'EMAIL_ALREADY_EXISTS',
+        });
+      }
       next(error);
     }
-  }
+  },
+
+  // POST /api/auth/login
+  login: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userAgent = req.headers['user-agent'];
+      const result = await authService.login(req.body, userAgent);
+
+      res.json({
+        success: true,
+        message: 'Connexion reussie.',
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === 'INVALID_CREDENTIALS') {
+        return res.status(401).json({
+          success: false,
+          message: 'Email ou mot de passe incorrect.',
+          error: 'INVALID_CREDENTIALS',
+        });
+      }
+      if (error.message === 'ACCOUNT_DISABLED') {
+        return res.status(403).json({
+          success: false,
+          message: 'Votre compte a ete desactive.',
+          error: 'ACCOUNT_DISABLED',
+        });
+      }
+      next(error);
+    }
+  },
 
   // POST /api/auth/logout
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  logout: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.userId;
-      const refreshToken = req.body.refreshToken;
+      const { refreshToken } = req.body;
 
-      if (userId) {
-        await authService.logout(userId, refreshToken);
+      if (refreshToken) {
+        await authService.logout(refreshToken);
       }
 
-      res.status(200).json({
+      res.json({
         success: true,
-        message: 'Déconnexion réussie',
+        message: 'Deconnexion reussie.',
       });
     } catch (error) {
       next(error);
     }
-  }
+  },
 
   // POST /api/auth/refresh
-  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  refresh: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { refreshToken } = req.body as RefreshTokenInput;
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Refresh token requis.',
+          error: 'MISSING_REFRESH_TOKEN',
+        });
+      }
 
       const tokens = await authService.refreshTokens(refreshToken);
 
-      res.status(200).json({
+      res.json({
         success: true,
-        message: 'Tokens rafraîchis',
-        data: { tokens },
+        message: 'Tokens rafraichis.',
+        data: tokens,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'SESSION_EXPIRED' || error.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          success: false,
+          message: 'Session expiree. Veuillez vous reconnecter.',
+          error: 'SESSION_EXPIRED',
+        });
+      }
       next(error);
     }
-  }
+  },
 
   // GET /api/auth/profile
-  async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  getProfile: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.userId;
+      const userId = (req as any).user?.userId;
 
       if (!userId) {
-        res.status(401).json({
+        return res.status(401).json({
           success: false,
-          message: 'Non authentifié',
+          message: 'Non authentifie.',
+          error: 'UNAUTHORIZED',
         });
-        return;
       }
 
-      const user = await authService.getProfile(userId);
+      const profile = await authService.getProfile(userId);
 
-      res.status(200).json({
+      res.json({
         success: true,
-        data: { user },
+        data: profile,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'USER_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur non trouve.',
+          error: 'USER_NOT_FOUND',
+        });
+      }
       next(error);
     }
-  }
+  },
 
   // GET /api/auth/verify
-  async verifyToken(req: Request, res: Response): Promise<void> {
-    // Si on arrive ici, le token est valide (middleware authenticate)
-    res.status(200).json({
-      success: true,
-      message: 'Token valide',
-      data: { user: req.user },
-    });
-  }
-
-  // POST /api/auth/forgot-password
-  async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  verifyToken: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email } = req.body as ForgotPasswordInput;
+      const userId = (req as any).user?.userId;
 
-      await authService.forgotPassword(email);
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Non authentifie.',
+          error: 'UNAUTHORIZED',
+        });
+      }
 
-      // Toujours renvoyer succès pour ne pas révéler si l'email existe
-      res.status(200).json({
+      const user = await authService.verifyToken(userId);
+
+      res.json({
         success: true,
-        message: 'Si cet email existe, un lien de réinitialisation a été envoyé',
+        data: user,
       });
     } catch (error) {
-      next(error);
-    }
-  }
-
-  // POST /api/auth/reset-password
-  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { token, password } = req.body as ResetPasswordInput;
-
-      await authService.resetPassword(token, password);
-
-      res.status(200).json({
-        success: true,
-        message: 'Mot de passe réinitialisé avec succès',
+      return res.status(401).json({
+        success: false,
+        message: 'Token invalide.',
+        error: 'INVALID_TOKEN',
       });
-    } catch (error) {
-      next(error);
     }
-  }
-}
+  },
+};
 
-export const authController = new AuthController();
+export default authController;

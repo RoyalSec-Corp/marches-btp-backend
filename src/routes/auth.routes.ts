@@ -1,83 +1,57 @@
 import { Router } from 'express';
 import { authController } from '../controllers/auth.controller.js';
-import { authenticate } from '../middlewares/authenticate.js';
-import { validate } from '../middlewares/validate.js';
-import {
-  loginSchema,
-  registerFreelanceSchema,
-  registerEntrepriseSchema,
-  refreshTokenSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-} from '../validations/auth.validation.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
+import { validateRegisterFreelance, validateRegisterEntreprise, validateLogin } from '../validators/auth.validator.js';
 
 const router = Router();
 
-// ===== ROUTES PUBLIQUES =====
+/**
+ * @route   POST /api/auth/register/freelance
+ * @desc    Inscription d'un freelance
+ * @access  Public
+ */
+router.post('/register/freelance', validateRegisterFreelance, authController.registerFreelance);
 
-// POST /api/auth/login - Connexion
-router.post(
-  '/login',
-  validate(loginSchema),
-  authController.login.bind(authController)
-);
+/**
+ * @route   POST /api/auth/register/entreprise
+ * @desc    Inscription d'une entreprise
+ * @access  Public
+ */
+router.post('/register/entreprise', validateRegisterEntreprise, authController.registerEntreprise);
 
-// POST /api/auth/register/freelance - Inscription Freelance
-router.post(
-  '/register/freelance',
-  validate(registerFreelanceSchema),
-  authController.registerFreelance.bind(authController)
-);
+/**
+ * @route   POST /api/auth/login
+ * @desc    Connexion utilisateur
+ * @access  Public
+ */
+router.post('/login', validateLogin, authController.login);
 
-// POST /api/auth/register/entreprise - Inscription Entreprise
-router.post(
-  '/register/entreprise',
-  validate(registerEntrepriseSchema),
-  authController.registerEntreprise.bind(authController)
-);
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Deconnexion utilisateur
+ * @access  Public
+ */
+router.post('/logout', authController.logout);
 
-// POST /api/auth/refresh - Rafraichir le token
-router.post(
-  '/refresh',
-  validate(refreshTokenSchema),
-  authController.refreshToken.bind(authController)
-);
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    Rafraichir les tokens
+ * @access  Public
+ */
+router.post('/refresh', authController.refresh);
 
-// POST /api/auth/forgot-password - Mot de passe oublie
-router.post(
-  '/forgot-password',
-  validate(forgotPasswordSchema),
-  authController.forgotPassword.bind(authController)
-);
+/**
+ * @route   GET /api/auth/profile
+ * @desc    Obtenir le profil de l'utilisateur connecte
+ * @access  Private
+ */
+router.get('/profile', authenticate, authController.getProfile);
 
-// POST /api/auth/reset-password - Reinitialiser le mot de passe
-router.post(
-  '/reset-password',
-  validate(resetPasswordSchema),
-  authController.resetPassword.bind(authController)
-);
-
-// ===== ROUTES PROTEGEES =====
-
-// POST /api/auth/logout - Deconnexion
-router.post(
-  '/logout',
-  authenticate,
-  authController.logout.bind(authController)
-);
-
-// GET /api/auth/profile - Profil utilisateur
-router.get(
-  '/profile',
-  authenticate,
-  authController.getProfile.bind(authController)
-);
-
-// GET /api/auth/verify - Verifier le token
-router.get(
-  '/verify',
-  authenticate,
-  authController.verifyToken.bind(authController)
-);
+/**
+ * @route   GET /api/auth/verify
+ * @desc    Verifier si le token est valide
+ * @access  Private
+ */
+router.get('/verify', authenticate, authController.verifyToken);
 
 export default router;
