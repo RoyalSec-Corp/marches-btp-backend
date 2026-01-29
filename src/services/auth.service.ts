@@ -1,5 +1,5 @@
 import { PrismaClient, UserType, StatutCompte } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import crypto from 'crypto';
