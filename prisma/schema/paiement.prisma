@@ -1,43 +1,53 @@
 // ============================================
-// MarchesBTP - Models Paiement (MVP2)
+// MarchesBTP - Models Paiement
+// MVP2 : Integration Societe Generale
 // ============================================
 
 model Paiement {
-  id                Int             @id @default(autoincrement())
+  id                  Int             @id @default(autoincrement())
+  
+  // Reference
+  reference           String          @unique
   
   // Contrat lie
-  contratId         Int             @map("contrat_id")
-  milestoneId       Int?            @map("milestone_id")
+  contratId           Int             @map("contrat_id")
+  milestoneId         Int?            @map("milestone_id")
   
-  // Montant
-  montant           Float
-  devise            String          @default("EUR")
+  // Montants
+  montant             Float
+  montantHT           Float?          @map("montant_ht")
+  montantTVA          Float?          @map("montant_tva")
+  devise              String          @default("EUR")
   
   // Parties
-  payeurId          Int             @map("payeur_id")
-  payeurType        String          @map("payeur_type")
-  beneficiaireId    Int             @map("beneficiaire_id")
-  beneficiaireType  String          @map("beneficiaire_type")
+  payeurId            Int             @map("payeur_id")
+  payeurType          String          @map("payeur_type")
+  beneficiaireId      Int             @map("beneficiaire_id")
+  beneficiaireType    String          @map("beneficiaire_type")
   
-  // Paiement externe (Societe Generale)
-  externalRef       String?         @map("external_ref")
-  paymentMethod     PaymentMethod   @default(VIREMENT) @map("payment_method")
+  // Methode
+  methodePaiement     PaymentMethod   @map("methode_paiement")
   
   // Statut
-  statut            PaiementStatus  @default(EN_ATTENTE)
+  statut              PaymentStatus   @default(EN_ATTENTE)
+  
+  // Societe Generale
+  sgTransactionId     String?         @map("sg_transaction_id")
+  sgStatus            String?         @map("sg_status")
+  sgResponseData      String?         @map("sg_response_data") @db.Text
   
   // Dates
-  paidAt            DateTime?       @map("paid_at")
-  failedAt          DateTime?       @map("failed_at")
-  failureReason     String?         @map("failure_reason")
+  dateCreation        DateTime        @default(now()) @map("date_creation")
+  datePaiement        DateTime?       @map("date_paiement")
+  dateEcheance        DateTime?       @map("date_echeance")
   
-  // Timestamps
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
+  // Facture
+  factureUrl          String?         @map("facture_url")
+  factureNumber       String?         @map("facture_number")
 
   // Relations
-  contrat           Contrat         @relation(fields: [contratId], references: [id], onDelete: Restrict)
-  milestone         ContractMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  contrat             Contrat         @relation(fields: [contratId], references: [id], onDelete: Restrict)
+  milestone           ContractMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
   @@map("paiements")
   @@index([contratId])
@@ -45,5 +55,6 @@ model Paiement {
   @@index([payeurId])
   @@index([beneficiaireId])
   @@index([statut])
-  @@index([externalRef])
+  @@index([reference])
+  @@index([dateCreation])
 }

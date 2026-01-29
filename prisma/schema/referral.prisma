@@ -1,5 +1,6 @@
 // ============================================
-// MarchesBTP - Models Parrainage (MVP2)
+// MarchesBTP - Models Parrainage
+// MVP2 : Systeme de parrainage
 // ============================================
 
 model Referral {
@@ -10,8 +11,8 @@ model Referral {
   referrerType    String          @map("referrer_type")
   
   // Filleul
-  refereeId       Int             @unique @map("referee_id")
-  refereeType     String          @map("referee_type")
+  referredId      Int             @map("referred_id")
+  referredType    String          @map("referred_type")
   
   // Code utilise
   referralCode    String          @map("referral_code")
@@ -19,20 +20,17 @@ model Referral {
   // Statut
   status          ReferralStatus  @default(PENDING)
   
-  // Validation
-  validatedAt     DateTime?       @map("validated_at")
-  
   // Timestamps
   createdAt       DateTime        @default(now()) @map("created_at")
-
+  validatedAt     DateTime?       @map("validated_at")
+  
   // Relations
-  referrer        User            @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
-  referee         User            @relation("RefereeRelation", fields: [refereeId], references: [id], onDelete: Cascade)
   rewards         ReferralReward[]
 
   @@map("referrals")
+  @@unique([referrerId, referredId])
   @@index([referrerId])
-  @@index([refereeId])
+  @@index([referredId])
   @@index([referralCode])
   @@index([status])
 }
@@ -53,15 +51,13 @@ model ReferralReward {
   // Statut
   status          RewardStatus      @default(PENDING)
   
-  // Paiement
-  paidAt          DateTime?         @map("paid_at")
-  
   // Timestamps
   createdAt       DateTime          @default(now()) @map("created_at")
+  claimedAt       DateTime?         @map("claimed_at")
+  expiresAt       DateTime?         @map("expires_at")
 
   // Relations
   referral        Referral          @relation(fields: [referralId], references: [id], onDelete: Cascade)
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("referral_rewards")
   @@index([referralId])
@@ -70,26 +66,18 @@ model ReferralReward {
 }
 
 model ReferralSettings {
-  id                    Int       @id @default(autoincrement())
+  id                      Int       @id @default(autoincrement())
   
-  // Recompenses parrain
-  referrerRewardAmount  Float     @map("referrer_reward_amount")
-  referrerRewardType    RewardType @map("referrer_reward_type")
-  
-  // Recompenses filleul
-  refereeRewardAmount   Float     @map("referee_reward_amount")
-  refereeRewardType     RewardType @map("referee_reward_type")
-  
-  // Conditions
-  minContractsToValidate Int      @default(1) @map("min_contracts_to_validate")
-  minAmountToValidate    Float?   @map("min_amount_to_validate")
-  
-  // Activation
-  isActive              Boolean   @default(true) @map("is_active")
+  // Configuration
+  isActive                Boolean   @default(true) @map("is_active")
+  referrerRewardAmount    Float     @default(50) @map("referrer_reward_amount")
+  referredRewardAmount    Float     @default(25) @map("referred_reward_amount")
+  minContractsToValidate  Int       @default(1) @map("min_contracts_to_validate")
+  rewardExpirationDays    Int       @default(90) @map("reward_expiration_days")
   
   // Timestamps
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   @@map("referral_settings")
 }

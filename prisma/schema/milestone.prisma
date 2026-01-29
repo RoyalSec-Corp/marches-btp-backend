@@ -1,5 +1,6 @@
 // ============================================
-// MarchesBTP - Models Milestones (MVP2)
+// MarchesBTP - Models Jalons Contrat
+// MVP2 : Paiements par etapes
 // ============================================
 
 model ContractMilestone {
@@ -15,16 +16,18 @@ model ContractMilestone {
   montant         Float
   pourcentage     Float?            @map("pourcentage")
   
+  // Dates
+  dateEcheance    DateTime?         @map("date_echeance")
+  dateDebut       DateTime?         @map("date_debut")
+  dateFin         DateTime?         @map("date_fin")
+  
   // Statut
   statut          MilestoneStatus   @default(EN_ATTENTE)
   
-  // Dates
-  dateEcheance    DateTime?         @map("date_echeance")
-  completedAt     DateTime?         @map("completed_at")
-  validatedAt     DateTime?         @map("validated_at")
-  
   // Validation
-  validatedBy     Int?              @map("validated_by")
+  validePar       Int?              @map("valide_par")
+  valideAt        DateTime?         @map("valide_at")
+  commentaire     String?           @db.Text
   
   // Timestamps
   createdAt       DateTime          @default(now()) @map("created_at")
@@ -35,7 +38,8 @@ model ContractMilestone {
   paiements       Paiement[]
 
   @@map("contract_milestones")
+  @@unique([contratId, ordre])
   @@index([contratId])
   @@index([statut])
-  @@index([ordre])
+  @@index([dateEcheance])
 }

@@ -1,5 +1,6 @@
 // ============================================
-// MarchesBTP - Model Favoris (MVP2)
+// MarchesBTP - Model Favori
+// MVP2 : Favoris entreprises
 // ============================================
 
 model Favori {
@@ -7,23 +8,23 @@ model Favori {
   
   // Utilisateur qui ajoute en favori
   userId          Int       @map("user_id")
+  userType        String    @map("user_type")
   
-  // Element mis en favori (freelance ou entreprise)
-  favoriId        Int       @map("favori_id")
-  favoriType      String    @map("favori_type")  // FREELANCE ou ENTREPRISE
+  // Freelance mis en favori
+  freelanceId     Int       @map("freelance_id")
   
   // Notes personnelles
-  notes           String?   @db.Text
+  note            String?   @db.Text
+  tags            String?   // Tags separes par virgule
   
   // Timestamps
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // Relations
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  freelance       Freelance @relation(fields: [freelanceId], references: [id], onDelete: Cascade)
 
   @@map("favoris")
-  @@unique([userId, favoriId, favoriType])
+  @@unique([userId, freelanceId])
   @@index([userId])
-  @@index([favoriId])
-  @@index([favoriType])
+  @@index([freelanceId])
 }

@@ -1,48 +1,48 @@
 // ============================================
-// MarchesBTP - Model Avis/Notation (MVP2)
+// MarchesBTP - Model Avis
+// MVP2 : Notation des freelances
 // ============================================
 
 model Avis {
   id              Int         @id @default(autoincrement())
   
-  // Contrat lie (obligatoire pour laisser un avis)
+  // Contrat associe
   contratId       Int         @map("contrat_id")
   
-  // Auteur de l'avis
+  // Auteur (entreprise qui note)
   auteurId        Int         @map("auteur_id")
   auteurType      String      @map("auteur_type")
   
-  // Cible de l'avis
+  // Cible (freelance note)
   cibleId         Int         @map("cible_id")
   cibleType       String      @map("cible_type")
   
-  // Notation
-  noteGlobale     Int         @map("note_globale")  // 1-5
-  noteQualite     Int?        @map("note_qualite")  // 1-5
-  noteDelais      Int?        @map("note_delais")   // 1-5
-  noteCommunication Int?      @map("note_communication") // 1-5
-  notePrix        Int?        @map("note_prix")     // 1-5
+  // Notes (sur 5)
+  noteGlobale     Float       @map("note_globale")
+  noteQualite     Float?      @map("note_qualite")
+  noteDelais      Float?      @map("note_delais")
+  noteCommunication Float?    @map("note_communication")
+  notePrix        Float?      @map("note_prix")
   
   // Commentaire
+  titre           String?
   commentaire     String?     @db.Text
+  
+  // Reponse du freelance
+  reponse         String?     @db.Text
+  reponseAt       DateTime?   @map("reponse_at")
   
   // Moderation
   isPublic        Boolean     @default(true) @map("is_public")
-  isModerated     Boolean     @default(false) @map("is_moderated")
-  moderatedAt     DateTime?   @map("moderated_at")
+  isVerified      Boolean     @default(false) @map("is_verified")
+  moderationStatus AvisStatus @default(EN_ATTENTE) @map("moderation_status")
   moderatedBy     Int?        @map("moderated_by")
-  
-  // Reponse
-  reponse         String?     @db.Text
-  reponseAt       DateTime?   @map("reponse_at")
+  moderatedAt     DateTime?   @map("moderated_at")
+  moderationNote  String?     @map("moderation_note")
   
   // Timestamps
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
-
-  // Relations
-  contrat         Contrat     @relation(fields: [contratId], references: [id], onDelete: Cascade)
-  auteur          User        @relation("AvisAuteur", fields: [auteurId], references: [id], onDelete: Cascade)
 
   @@map("avis")
   @@unique([contratId, auteurId])
@@ -50,5 +50,6 @@ model Avis {
   @@index([auteurId])
   @@index([cibleId])
   @@index([noteGlobale])
+  @@index([moderationStatus])
   @@index([isPublic])
 }
