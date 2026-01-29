@@ -10,16 +10,11 @@ import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
 // Import des routes
 import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
-import freelanceRoutes from './routes/freelance.routes.js';
-import entrepriseRoutes from './routes/entreprise.routes.js';
-import contratRoutes from './routes/contrat.routes.js';
-import notificationRoutes from './routes/notification.routes.js';
 
-// Créer l'application Express
+// Creer l'application Express
 const app: Application = express();
 
-// ===== MIDDLEWARES DE SÉCURITÉ =====
+// ===== MIDDLEWARES DE SECURITE =====
 app.use(helmet());
 app.use(cors({
   origin: env.CORS_ORIGIN,
@@ -33,7 +28,7 @@ const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   max: env.RATE_LIMIT_MAX_REQUESTS,
   message: { 
-    error: 'Trop de requêtes, veuillez réessayer plus tard.',
+    error: 'Trop de requetes, veuillez reessayer plus tard.',
     code: 'RATE_LIMIT_EXCEEDED'
   },
   standardHeaders: true,
@@ -54,11 +49,14 @@ if (env.NODE_ENV === 'development') {
 
 // ===== ROUTES API =====
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/freelances', freelanceRoutes);
-app.use('/api/entreprises', entrepriseRoutes);
-app.use('/api/contrats', contratRoutes);
-app.use('/api/notifications', notificationRoutes);
+
+// TODO: Sprint 4 - Ajouter les autres routes
+// app.use('/api/users', userRoutes);
+// app.use('/api/freelances', freelanceRoutes);
+// app.use('/api/entreprises', entrepriseRoutes);
+// app.use('/api/contrats', contratRoutes);
+// app.use('/api/appels-offres', appelOffreRoutes);
+// app.use('/api/notifications', notificationRoutes);
 
 // ===== ROUTE HEALTH CHECK =====
 app.get('/health', (_req, res) => {
@@ -72,9 +70,13 @@ app.get('/health', (_req, res) => {
 // ===== ROUTE RACINE =====
 app.get('/', (_req, res) => {
   res.json({
-    name: 'Marchés BTP API',
-    version: '1.0.0',
+    name: 'Marches BTP API',
+    version: '2.0.0',
     documentation: '/api/docs',
+    endpoints: {
+      auth: '/api/auth',
+      health: '/health',
+    },
   });
 });
 
