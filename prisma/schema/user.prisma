@@ -21,7 +21,7 @@ model User {
   latitude          Float?
   longitude         Float?
 
-  // Parrainage (prepare pour MVP2)
+  // Parrainage
   referralCode      String?   @unique @map("referral_code")
   referredByUserId  Int?      @map("referred_by_user_id")
   referredBy        User?     @relation("UserReferrals", fields: [referredByUserId], references: [id])
@@ -35,13 +35,29 @@ model User {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  // Relations
+  // === Relations MVP1 ===
   freelance         Freelance?
   entreprise        Entreprise?
   sessions          Session[]
   sentMessages      Message[]      @relation("SentMessages")
   receivedMessages  Message[]      @relation("ReceivedMessages")
   notifications     Notification[]
+
+  // === Relations MVP2 ===
+  // Parrainage
+  referralsAsReferrer Referral[]       @relation("ReferrerRelation")
+  referralsAsReferee  Referral[]       @relation("RefereeRelation")
+  referralRewards     ReferralReward[]
+  
+  // Avis
+  avisRediges         Avis[]           @relation("AvisAuteur")
+  
+  // Favoris
+  favoris             Favori[]
+  
+  // Litiges
+  litigesDemandes     Litige[]         @relation("LitigeDemandeur")
+  litigeMessages      LitigeMessage[]
 
   @@map("users")
   @@index([email])
