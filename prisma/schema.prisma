@@ -1,6 +1,8 @@
-// Marchés BTP - Schéma Prisma
-// Sprint 1 : Configuration initiale
-// Sprint 2 : Modèles complets
+// ============================================
+// MarchésBTP - Schéma Prisma Complet
+// Sprint 2 : Modèles & Migrations
+// Version: 2.0.0
+// ============================================
 
 generator client {
   provider = "prisma-client-js"
@@ -22,6 +24,13 @@ enum UserType {
   ADMIN
 }
 
+enum StatutCompte {
+  EN_ATTENTE
+  VALIDE
+  REFUSE
+  SUSPENDU
+}
+
 enum ContratStatus {
   BROUILLON
   EN_ATTENTE
@@ -29,34 +38,493 @@ enum ContratStatus {
   EN_COURS
   TERMINE
   ANNULE
+  LITIGE
+}
+
+enum AppelOffreStatus {
+  BROUILLON
+  PUBLIE
+  CLOTURE
+  ANNULE
+}
+
+enum CandidatureStatus {
+  EN_ATTENTE
+  ACCEPTE
+  REFUSE
+  RETIRE
 }
 
 enum NotificationType {
   CONTRAT
   MESSAGE
   APPEL_OFFRE
+  CANDIDATURE
   SYSTEME
 }
 
+enum ModeTarification {
+  JOUR
+  HEURE
+  FORFAIT
+}
+
+enum TypePersonne {
+  PARTICULIER
+  PROFESSIONNEL
+}
+
+enum SignerType {
+  FREELANCE
+  ENTREPRISE
+}
+
+enum TypeCandidature {
+  FREELANCE
+  ENTREPRISE
+}
+
 // ============================================
-// MODÈLES - À compléter au Sprint 2
+// MODELE USER (Authentification)
 // ============================================
 
-/// Utilisateur de base (authentification)
 model User {
-  id          Int       @id @default(autoincrement())
-  email       String    @unique
-  password    String
-  userType    UserType  @map("user_type")
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  password          String
+  userType          UserType  @map("user_type")
+  isActive          Boolean   @default(true) @map("is_active")
+  
+  // Informations personnelles
+  nom               String?
+  prenom            String?
+  telephone         String?
+  adresse           String?
+  ville             String?
+  codePostal        String?   @map("code_postal")
+  
+  // Geolocalisation
+  latitude          Float?
+  longitude         Float?
+  
+  // Parrainage (prepare pour MVP2)
+  referralCode      String?   @unique @map("referral_code")
+  referredByUserId  Int?      @map("referred_by_user_id")
+  referredBy        User?     @relation("UserReferrals", fields: [referredByUserId], references: [id])
+  referrals         User[]    @relation("UserReferrals")
+  
+  // Reset password
+  resetToken        String?   @map("reset_token")
+  resetTokenExpires DateTime? @map("reset_token_expires")
+  
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  // Relations (à définir au Sprint 2)
-  // freelance      Freelance?
-  // entreprise     Entreprise?
-  // sessions       Session[]
-  // notifications  Notification[]
+  // Relations
+  freelance         Freelance?
+  entreprise        Entreprise?
+  sessions          Session[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]      @relation("ReceivedMessages")
+  notifications     Notification[]
 
   @@map("users")
+  @@index([email])
+  @@index([userType])
+  @@index([referralCode])
+}
+
+// ============================================
+// MODELE SESSION (Authentification)
+// ============================================
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  token       String   @unique
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ============================================
+// MODELE FREELANCE (Profil Artisan)
+// ============================================
+
+model Freelance {
+  id                Int              @id @default(autoincrement())
+  userId            Int              @unique @map("user_id")
+  
+  // Identite
+  nom               String
+  prenom            String
+  email             String?
+  telephone         String?
+  
+  // Metier
+  metier            String
+  tarif             Float
+  modeTarification  ModeTarification @default(JOUR) @map("mode_tarification")
+  disponible        Boolean          @default(true)
+  experienceYears   Int?             @map("experience_years")
+  description       String?          @db.Text
+  
+  // Documents legaux
+  siret             String?
+  kbisPath          String?          @map("kbis_path")
+  assurancePath     String?          @map("assurance_path")
+  
+  // Profil
+  photoProfil       String?          @map("photo_profil") @db.Text
+  
+  // Statut
+  statutCompte      StatutCompte     @default(EN_ATTENTE) @map("statut_compte")
+  isActive          Boolean          @default(true) @map("is_active")
+  
+  // Timestamps
+  dateInscription   DateTime         @default(now()) @map("date_inscription")
+
+  // Relations
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contrats          Contrat[]
+  candidatures      AppelOffreCandidature[]
+  signatures        ContractSignature[]
+
+  @@map("freelances")
+  @@index([metier])
+  @@index([statutCompte])
+  @@index([disponible])
+  @@index([siret])
+}
+
+// ============================================
+// MODELE ENTREPRISE (Profil Entreprise)
+// ============================================
+
+model Entreprise {
+  id                  Int              @id @default(autoincrement())
+  userId              Int              @unique @map("user_id")
+  
+  // Identite entreprise
+  raisonSociale       String           @map("raison_sociale")
+  siret               String           @unique
+  formeJuridique      String?          @map("forme_juridique")
+  nafCode             String?          @map("naf_code")
+  representantLegal   String?          @map("representant_legal")
+  
+  // Contact
+  email               String?
+  telephone           String?
+  
+  // Adresse
+  adresse             String?
+  ville               String?
+  codePostal          String?          @map("code_postal")
+  
+  // Documents
+  kbisPath            String?          @map("kbis_path")
+  description         String?          @db.Text
+  
+  // Statut
+  statutCompte        StatutCompte     @default(EN_ATTENTE) @map("statut_compte")
+  isActive            Boolean          @default(true) @map("is_active")
+  
+  // Timestamps
+  dateInscription     DateTime         @default(now()) @map("date_inscription")
+
+  // Relations
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appelsOffres        AppelOffre[]
+  contrats            Contrat[]
+  candidatures        AppelOffreCandidature[]
+  signatures          ContractSignature[]
+
+  @@map("entreprises")
+  @@index([siret])
+  @@index([statutCompte])
+  @@index([nafCode])
+}
+
+// ============================================
+// MODELE APPEL D'OFFRE
+// ============================================
+
+model AppelOffre {
+  id                Int                     @id @default(autoincrement())
+  
+  // Contenu
+  titre             String
+  description       String?                 @db.Text
+  budget            String?
+  ville             String?
+  typeConstruction  String?                 @map("type_construction")
+  secteur           String?
+  
+  // Type d'emetteur
+  typePersonne      TypePersonne            @default(PROFESSIONNEL) @map("type_personne")
+  
+  // Proprietaire
+  entrepriseId      Int?                    @map("entreprise_id")
+  adminId           Int?                    @map("admin_id")
+  
+  // Scraping (prepare pour MVP2)
+  urlSource         String?                 @map("url_source") @db.Text
+  
+  // Cible
+  cible             String?                 @default("TOUS")
+  
+  // Statut
+  statutCompte      AppelOffreStatus        @default(BROUILLON) @map("statut_compte")
+  
+  // Dates
+  dateLimite        DateTime?               @map("date_limite")
+  dateCreation      DateTime                @default(now()) @map("date_creation")
+
+  // Relations
+  entreprise        Entreprise?             @relation(fields: [entrepriseId], references: [id], onDelete: SetNull)
+  candidatures      AppelOffreCandidature[]
+  contrats          Contrat[]
+  messages          Message[]
+
+  @@map("appels_offres")
+  @@index([entrepriseId])
+  @@index([statutCompte])
+  @@index([ville])
+  @@index([secteur])
+  @@index([dateLimite])
+}
+
+// ============================================
+// MODELE CANDIDATURE APPEL D'OFFRE
+// ============================================
+
+model AppelOffreCandidature {
+  id              Int                @id @default(autoincrement())
+  appelOffreId    Int                @map("appel_offre_id")
+  
+  // Candidat (freelance OU entreprise)
+  freelanceId     Int?               @map("freelance_id")
+  entrepriseId    Int?               @map("entreprise_id")
+  typeCandidat    TypeCandidature    @map("type_candidat")
+  
+  // Proposition
+  proposition     String?            @db.Text
+  budgetPropose   Float?             @map("budget_propose")
+  dureeProposee   String?            @map("duree_proposee")
+  
+  // Statut
+  statut          CandidatureStatus  @default(EN_ATTENTE)
+  
+  // Timestamps
+  datePostulation DateTime           @default(now()) @map("date_postulation")
+
+  // Relations
+  appelOffre      AppelOffre         @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  freelance       Freelance?         @relation(fields: [freelanceId], references: [id], onDelete: Cascade)
+  entreprise      Entreprise?        @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("appel_offre_candidatures")
+  @@unique([appelOffreId, freelanceId])
+  @@unique([appelOffreId, entrepriseId])
+  @@index([appelOffreId])
+  @@index([freelanceId])
+  @@index([entrepriseId])
+  @@index([statut])
+}
+
+// ============================================
+// MODELE CONTRAT
+// ============================================
+
+model Contrat {
+  id                    Int                 @id @default(autoincrement())
+  
+  // Contenu
+  titre                 String
+  description           String?             @db.Text
+  montant               Float
+  
+  // Statut
+  statut                ContratStatus       @default(BROUILLON)
+  progressStage         String?             @map("progress_stage")
+  
+  // Signatures
+  bothPartiesSigned     Boolean             @default(false) @map("both_parties_signed")
+  signatureCompletedAt  DateTime?           @map("signature_completed_at")
+  
+  // Parties
+  entrepriseId          Int                 @map("entreprise_id")
+  freelanceId           Int                 @map("freelance_id")
+  
+  // Origine (optionnel)
+  appelOffreId          Int?                @map("appel_offre_id")
+  
+  // Dates
+  dateDebut             DateTime?           @map("date_debut")
+  dateFin               DateTime?           @map("date_fin")
+  
+  // Timestamps
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  entreprise            Entreprise          @relation(fields: [entrepriseId], references: [id], onDelete: Restrict)
+  freelance             Freelance           @relation(fields: [freelanceId], references: [id], onDelete: Restrict)
+  appelOffre            AppelOffre?         @relation(fields: [appelOffreId], references: [id], onDelete: SetNull)
+  signatures            ContractSignature[]
+  documents             ContractDocument[]
+  messages              Message[]
+  notifications         Notification[]
+
+  @@map("contrats")
+  @@index([entrepriseId])
+  @@index([freelanceId])
+  @@index([appelOffreId])
+  @@index([statut])
+  @@index([createdAt])
+}
+
+// ============================================
+// MODELE SIGNATURE CONTRAT
+// ============================================
+
+model ContractSignature {
+  id            Int         @id @default(autoincrement())
+  contratId     Int         @map("contrat_id")
+  
+  // Signataire
+  signerId      Int         @map("signer_id")
+  signerType    SignerType  @map("signer_type")
+  signerName    String      @map("signer_name")
+  
+  // Signature
+  signatureData String?     @map("signature_data") @db.Text
+  ipAddress     String?     @map("ip_address")
+  
+  // Timestamps
+  signedAt      DateTime    @default(now()) @map("signed_at")
+
+  // Relations
+  contrat       Contrat     @relation(fields: [contratId], references: [id], onDelete: Cascade)
+  freelance     Freelance?  @relation(fields: [signerId], references: [id], onDelete: Cascade, map: "contract_signatures_freelance_fkey")
+  entreprise    Entreprise? @relation(fields: [signerId], references: [id], onDelete: Cascade, map: "contract_signatures_entreprise_fkey")
+
+  @@map("contract_signatures")
+  @@unique([contratId, signerType])
+  @@index([contratId])
+  @@index([signerId])
+}
+
+// ============================================
+// MODELE DOCUMENT CONTRAT
+// ============================================
+
+model ContractDocument {
+  id            Int      @id @default(autoincrement())
+  contratId     Int      @map("contrat_id")
+  
+  // Document
+  documentName  String   @map("document_name")
+  filePath      String   @map("file_path")
+  fileSize      Int?     @map("file_size")
+  mimeType      String?  @map("mime_type")
+  
+  // Statut
+  isSigned      Boolean  @default(false) @map("is_signed")
+  
+  // Timestamps
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  contrat       Contrat  @relation(fields: [contratId], references: [id], onDelete: Cascade)
+
+  @@map("contract_documents")
+  @@index([contratId])
+}
+
+// ============================================
+// MODELE MESSAGE
+// ============================================
+
+model Message {
+  id            Int       @id @default(autoincrement())
+  
+  // Expediteur
+  senderId      Int       @map("sender_id")
+  senderType    String    @map("sender_type")
+  
+  // Destinataire
+  receiverId    Int       @map("receiver_id")
+  receiverType  String    @map("receiver_type")
+  
+  // Contenu
+  contenu       String    @db.Text
+  lu            Boolean   @default(false)
+  
+  // Contexte (optionnel)
+  contratId     Int?      @map("contrat_id")
+  appelOffreId  Int?      @map("appel_offre_id")
+  
+  // Timestamps
+  dateEnvoi     DateTime  @default(now()) @map("date_envoi")
+
+  // Relations
+  sender        User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  contrat       Contrat?  @relation(fields: [contratId], references: [id], onDelete: SetNull)
+  appelOffre    AppelOffre? @relation(fields: [appelOffreId], references: [id], onDelete: SetNull)
+
+  @@map("messages")
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([contratId])
+  @@index([appelOffreId])
+  @@index([lu])
+  @@index([dateEnvoi])
+}
+
+// ============================================
+// MODELE NOTIFICATION
+// ============================================
+
+model Notification {
+  id                Int              @id @default(autoincrement())
+  
+  // Destinataire
+  destinataireId    Int              @map("destinataire_id")
+  destinataireType  String           @map("destinataire_type")
+  
+  // Contenu
+  typeNotification  NotificationType @map("type_notification")
+  titre             String?
+  message           String           @db.Text
+  
+  // Statut
+  lu                Boolean          @default(false)
+  
+  // Contexte (optionnel)
+  contratId         Int?             @map("contrat_id")
+  
+  // Timestamps
+  dateEnvoi         DateTime         @default(now()) @map("date_envoi")
+
+  // Relations
+  destinataire      User             @relation(fields: [destinataireId], references: [id], onDelete: Cascade)
+  contrat           Contrat?         @relation(fields: [contratId], references: [id], onDelete: SetNull)
+
+  @@map("notifications")
+  @@index([destinataireId])
+  @@index([typeNotification])
+  @@index([lu])
+  @@index([dateEnvoi])
 }
