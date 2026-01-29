@@ -23,6 +23,7 @@
     "prepare": "husky"
   },
   "prisma": {
+    "schema": "prisma/schema",
     "seed": "tsx prisma/seed.ts"
   },
   "lint-staged": {
