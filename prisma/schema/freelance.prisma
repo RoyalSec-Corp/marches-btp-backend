@@ -1,0 +1,49 @@
+// ============================================
+// MarchesBTP - Model Freelance
+// ============================================
+
+model Freelance {
+  id                Int              @id @default(autoincrement())
+  userId            Int              @unique @map("user_id")
+
+  // Identite
+  nom               String
+  prenom            String
+  email             String?
+  telephone         String?
+
+  // Metier
+  metier            String
+  tarif             Float
+  modeTarification  ModeTarification @default(JOUR) @map("mode_tarification")
+  disponible        Boolean          @default(true)
+  experienceYears   Int?             @map("experience_years")
+  description       String?          @db.Text
+
+  // Documents legaux
+  siret             String?
+  kbisPath          String?          @map("kbis_path")
+  assurancePath     String?          @map("assurance_path")
+
+  // Profil
+  photoProfil       String?          @map("photo_profil") @db.Text
+
+  // Statut
+  statutCompte      StatutCompte     @default(EN_ATTENTE) @map("statut_compte")
+  isActive          Boolean          @default(true) @map("is_active")
+
+  // Timestamps
+  dateInscription   DateTime         @default(now()) @map("date_inscription")
+
+  // Relations
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contrats          Contrat[]
+  candidatures      AppelOffreCandidature[]
+  signatures        ContractSignature[]
+
+  @@map("freelances")
+  @@index([metier])
+  @@index([statutCompte])
+  @@index([disponible])
+  @@index([siret])
+}

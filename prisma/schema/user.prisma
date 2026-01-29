@@ -1,0 +1,50 @@
+// ============================================
+// MarchesBTP - Model User
+// ============================================
+
+model User {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  password          String
+  userType          UserType  @map("user_type")
+  isActive          Boolean   @default(true) @map("is_active")
+
+  // Informations personnelles
+  nom               String?
+  prenom            String?
+  telephone         String?
+  adresse           String?
+  ville             String?
+  codePostal        String?   @map("code_postal")
+
+  // Geolocalisation
+  latitude          Float?
+  longitude         Float?
+
+  // Parrainage (prepare pour MVP2)
+  referralCode      String?   @unique @map("referral_code")
+  referredByUserId  Int?      @map("referred_by_user_id")
+  referredBy        User?     @relation("UserReferrals", fields: [referredByUserId], references: [id])
+  referrals         User[]    @relation("UserReferrals")
+
+  // Reset password
+  resetToken        String?   @map("reset_token")
+  resetTokenExpires DateTime? @map("reset_token_expires")
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  freelance         Freelance?
+  entreprise        Entreprise?
+  sessions          Session[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]      @relation("ReceivedMessages")
+  notifications     Notification[]
+
+  @@map("users")
+  @@index([email])
+  @@index([userType])
+  @@index([referralCode])
+}

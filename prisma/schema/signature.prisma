@@ -1,0 +1,30 @@
+// ============================================
+// MarchesBTP - Model ContractSignature
+// ============================================
+
+model ContractSignature {
+  id            Int         @id @default(autoincrement())
+  contratId     Int         @map("contrat_id")
+
+  // Signataire
+  signerId      Int         @map("signer_id")
+  signerType    SignerType  @map("signer_type")
+  signerName    String      @map("signer_name")
+
+  // Signature
+  signatureData String?     @map("signature_data") @db.Text
+  ipAddress     String?     @map("ip_address")
+
+  // Timestamps
+  signedAt      DateTime    @default(now()) @map("signed_at")
+
+  // Relations
+  contrat       Contrat     @relation(fields: [contratId], references: [id], onDelete: Cascade)
+  freelance     Freelance?  @relation(fields: [signerId], references: [id], onDelete: Cascade, map: "contract_signatures_freelance_fkey")
+  entreprise    Entreprise? @relation(fields: [signerId], references: [id], onDelete: Cascade, map: "contract_signatures_entreprise_fkey")
+
+  @@map("contract_signatures")
+  @@unique([contratId, signerType])
+  @@index([contratId])
+  @@index([signerId])
+}

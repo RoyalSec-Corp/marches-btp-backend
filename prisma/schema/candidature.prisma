@@ -1,0 +1,37 @@
+// ============================================
+// MarchesBTP - Model AppelOffreCandidature
+// ============================================
+
+model AppelOffreCandidature {
+  id              Int                @id @default(autoincrement())
+  appelOffreId    Int                @map("appel_offre_id")
+
+  // Candidat (freelance OU entreprise)
+  freelanceId     Int?               @map("freelance_id")
+  entrepriseId    Int?               @map("entreprise_id")
+  typeCandidat    TypeCandidature    @map("type_candidat")
+
+  // Proposition
+  proposition     String?            @db.Text
+  budgetPropose   Float?             @map("budget_propose")
+  dureeProposee   String?            @map("duree_proposee")
+
+  // Statut
+  statut          CandidatureStatus  @default(EN_ATTENTE)
+
+  // Timestamps
+  datePostulation DateTime           @default(now()) @map("date_postulation")
+
+  // Relations
+  appelOffre      AppelOffre         @relation(fields: [appelOffreId], references: [id], onDelete: Cascade)
+  freelance       Freelance?         @relation(fields: [freelanceId], references: [id], onDelete: Cascade)
+  entreprise      Entreprise?        @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+
+  @@map("appel_offre_candidatures")
+  @@unique([appelOffreId, freelanceId])
+  @@unique([appelOffreId, entrepriseId])
+  @@index([appelOffreId])
+  @@index([freelanceId])
+  @@index([entrepriseId])
+  @@index([statut])
+}

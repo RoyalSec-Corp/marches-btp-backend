@@ -1,0 +1,70 @@
+// ============================================
+// MarchesBTP - Enumerations
+// ============================================
+
+enum UserType {
+  FREELANCE
+  ENTREPRISE
+  APPEL_OFFRE
+  ADMIN
+}
+
+enum StatutCompte {
+  EN_ATTENTE
+  VALIDE
+  REFUSE
+  SUSPENDU
+}
+
+enum ContratStatus {
+  BROUILLON
+  EN_ATTENTE
+  SIGNE
+  EN_COURS
+  TERMINE
+  ANNULE
+  LITIGE
+}
+
+enum AppelOffreStatus {
+  BROUILLON
+  PUBLIE
+  CLOTURE
+  ANNULE
+}
+
+enum CandidatureStatus {
+  EN_ATTENTE
+  ACCEPTE
+  REFUSE
+  RETIRE
+}
+
+enum NotificationType {
+  CONTRAT
+  MESSAGE
+  APPEL_OFFRE
+  CANDIDATURE
+  SYSTEME
+}
+
+enum ModeTarification {
+  JOUR
+  HEURE
+  FORFAIT
+}
+
+enum TypePersonne {
+  PARTICULIER
+  PROFESSIONNEL
+}
+
+enum SignerType {
+  FREELANCE
+  ENTREPRISE
+}
+
+enum TypeCandidature {
+  FREELANCE
+  ENTREPRISE
+}

@@ -1,0 +1,51 @@
+// ============================================
+// MarchesBTP - Model Contrat
+// ============================================
+
+model Contrat {
+  id                    Int                 @id @default(autoincrement())
+
+  // Contenu
+  titre                 String
+  description           String?             @db.Text
+  montant               Float
+
+  // Statut
+  statut                ContratStatus       @default(BROUILLON)
+  progressStage         String?             @map("progress_stage")
+
+  // Signatures
+  bothPartiesSigned     Boolean             @default(false) @map("both_parties_signed")
+  signatureCompletedAt  DateTime?           @map("signature_completed_at")
+
+  // Parties
+  entrepriseId          Int                 @map("entreprise_id")
+  freelanceId           Int                 @map("freelance_id")
+
+  // Origine (optionnel)
+  appelOffreId          Int?                @map("appel_offre_id")
+
+  // Dates
+  dateDebut             DateTime?           @map("date_debut")
+  dateFin               DateTime?           @map("date_fin")
+
+  // Timestamps
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  entreprise            Entreprise          @relation(fields: [entrepriseId], references: [id], onDelete: Restrict)
+  freelance             Freelance           @relation(fields: [freelanceId], references: [id], onDelete: Restrict)
+  appelOffre            AppelOffre?         @relation(fields: [appelOffreId], references: [id], onDelete: SetNull)
+  signatures            ContractSignature[]
+  documents             ContractDocument[]
+  messages              Message[]
+  notifications         Notification[]
+
+  @@map("contrats")
+  @@index([entrepriseId])
+  @@index([freelanceId])
+  @@index([appelOffreId])
+  @@index([statut])
+  @@index([createdAt])
+}

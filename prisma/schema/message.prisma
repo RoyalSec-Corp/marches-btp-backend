@@ -1,0 +1,40 @@
+// ============================================
+// MarchesBTP - Model Message
+// ============================================
+
+model Message {
+  id            Int       @id @default(autoincrement())
+
+  // Expediteur
+  senderId      Int       @map("sender_id")
+  senderType    String    @map("sender_type")
+
+  // Destinataire
+  receiverId    Int       @map("receiver_id")
+  receiverType  String    @map("receiver_type")
+
+  // Contenu
+  contenu       String    @db.Text
+  lu            Boolean   @default(false)
+
+  // Contexte (optionnel)
+  contratId     Int?      @map("contrat_id")
+  appelOffreId  Int?      @map("appel_offre_id")
+
+  // Timestamps
+  dateEnvoi     DateTime  @default(now()) @map("date_envoi")
+
+  // Relations
+  sender        User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver      User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  contrat       Contrat?  @relation(fields: [contratId], references: [id], onDelete: SetNull)
+  appelOffre    AppelOffre? @relation(fields: [appelOffreId], references: [id], onDelete: SetNull)
+
+  @@map("messages")
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([contratId])
+  @@index([appelOffreId])
+  @@index([lu])
+  @@index([dateEnvoi])
+}
