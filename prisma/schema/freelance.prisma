@@ -32,18 +32,27 @@ model Freelance {
   statutCompte      StatutCompte     @default(EN_ATTENTE) @map("statut_compte")
   isActive          Boolean          @default(true) @map("is_active")
 
+  // Stats MVP2 (cache pour performance)
+  noteGlobale       Float?           @map("note_globale")
+  nombreAvis        Int              @default(0) @map("nombre_avis")
+  nombreContrats    Int              @default(0) @map("nombre_contrats")
+
   // Timestamps
   dateInscription   DateTime         @default(now()) @map("date_inscription")
 
-  // Relations
+  // === Relations MVP1 ===
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   contrats          Contrat[]
   candidatures      AppelOffreCandidature[]
   signatures        ContractSignature[]
+
+  // === Relations MVP2 ===
+  favoris           Favori[]
 
   @@map("freelances")
   @@index([metier])
   @@index([statutCompte])
   @@index([disponible])
   @@index([siret])
+  @@index([noteGlobale])
 }
