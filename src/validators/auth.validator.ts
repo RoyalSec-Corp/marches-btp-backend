@@ -78,14 +78,10 @@ export const validateRegisterEntreprise = [
   body('siret')
     .matches(/^\d{14}$/)
     .withMessage('Le SIRET doit contenir 14 chiffres.'),
-  body('representantNom')
+  body('representantLegal')
     .trim()
     .notEmpty()
-    .withMessage('Le nom du representant est requis.'),
-  body('representantPrenom')
-    .trim()
-    .notEmpty()
-    .withMessage('Le prenom du representant est requis.'),
+    .withMessage('Le nom du representant legal est requis.'),
   body('telephone')
     .optional()
     .matches(/^(\+33|0)[1-9](\d{2}){4}$/)
@@ -94,6 +90,9 @@ export const validateRegisterEntreprise = [
     .optional()
     .matches(/^\d{5}$/)
     .withMessage('Code postal invalide.'),
+  body('formeJuridique')
+    .optional()
+    .trim(),
   handleValidationErrors,
 ];
 
