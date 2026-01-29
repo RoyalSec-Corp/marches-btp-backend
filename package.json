@@ -1,7 +1,7 @@
 {
   "name": "marches-btp-backend",
-  "version": "1.0.0",
-  "description": "Backend API pour la marketplace Marchés BTP",
+  "version": "2.0.0",
+  "description": "Backend API pour la marketplace Marches BTP",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -14,10 +14,16 @@
     "format:check": "prettier --check src/",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:reset": "prisma migrate reset --force",
+    "db:setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed",
     "test": "jest",
     "prepare": "husky"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [
