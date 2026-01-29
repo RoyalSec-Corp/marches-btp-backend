@@ -43,22 +43,6 @@ model User {
   receivedMessages  Message[]      @relation("ReceivedMessages")
   notifications     Notification[]
 
-  // === Relations MVP2 ===
-  // Parrainage
-  referralsAsReferrer Referral[]       @relation("ReferrerRelation")
-  referralsAsReferee  Referral[]       @relation("RefereeRelation")
-  referralRewards     ReferralReward[]
-  
-  // Avis
-  avisRediges         Avis[]           @relation("AvisAuteur")
-  
-  // Favoris
-  favoris             Favori[]
-  
-  // Litiges
-  litigesDemandes     Litige[]         @relation("LitigeDemandeur")
-  litigeMessages      LitigeMessage[]
-
   @@map("users")
   @@index([email])
   @@index([userType])
