@@ -2,7 +2,9 @@
 // MarchesBTP - Enumerations
 // ============================================
 
-// === MVP1 ===
+// ===================================
+// MVP1 - Enums de base
+// ===================================
 
 enum UserType {
   FREELANCE
@@ -48,6 +50,8 @@ enum NotificationType {
   APPEL_OFFRE
   CANDIDATURE
   PAIEMENT
+  MILESTONE
+  AVIS
   LITIGE
   REFERRAL
   SYSTEME
@@ -74,7 +78,9 @@ enum TypeCandidature {
   ENTREPRISE
 }
 
-// === MVP2 - Parrainage ===
+// ===================================
+// MVP2 - Parrainage
+// ===================================
 
 enum ReferralStatus {
   PENDING
@@ -97,9 +103,11 @@ enum RewardStatus {
   CANCELLED
 }
 
-// === MVP2 - Paiement ===
+// ===================================
+// MVP2 - Paiement
+// ===================================
 
-enum PaiementStatus {
+enum PaymentStatus {
   EN_ATTENTE
   EN_COURS
   VALIDE
@@ -115,7 +123,9 @@ enum PaymentMethod {
   CHEQUE
 }
 
-// === MVP2 - Milestones ===
+// ===================================
+// MVP2 - Milestones
+// ===================================
 
 enum MilestoneStatus {
   EN_ATTENTE
@@ -126,14 +136,28 @@ enum MilestoneStatus {
   ANNULE
 }
 
-// === MVP2 - Litiges ===
+// ===================================
+// MVP2 - Avis
+// ===================================
 
-enum LitigeCategorie {
+enum AvisStatus {
+  EN_ATTENTE
+  APPROUVE
+  REJETE
+  SIGNALE
+}
+
+// ===================================
+// MVP2 - Litiges
+// ===================================
+
+enum LitigeType {
   QUALITE_TRAVAIL
-  RETARD
+  RETARD_LIVRAISON
   NON_PAIEMENT
   ABANDON_CHANTIER
   MALFACON
+  NON_RESPECT_CONTRAT
   COMMUNICATION
   AUTRE
 }
@@ -145,10 +169,10 @@ enum LitigeStatus {
   MEDIATION
   RESOLU
   FERME
-  ESCALE
+  ESCALADE
 }
 
-enum LitigePriorite {
+enum LitigePriority {
   BASSE
   NORMALE
   HAUTE
