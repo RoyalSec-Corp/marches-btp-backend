@@ -1,0 +1,27 @@
+// ============================================
+// MarchesBTP - Model ContractDocument
+// Documents attaches aux contrats
+// ============================================
+
+model ContractDocument {
+  id            Int      @id @default(autoincrement())
+  contratId     Int      @map("contrat_id")
+
+  // Document
+  documentName  String   @map("document_name")
+  filePath      String   @map("file_path")
+  fileSize      Int?     @map("file_size")
+  mimeType      String?  @map("mime_type")
+
+  // Statut
+  isSigned      Boolean  @default(false) @map("is_signed")
+
+  // Timestamps
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  contrat       Contrat  @relation(fields: [contratId], references: [id], onDelete: Cascade)
+
+  @@map("contract_documents")
+  @@index([contratId])
+}

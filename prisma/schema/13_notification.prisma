@@ -1,0 +1,36 @@
+// ============================================
+// MarchesBTP - Model Notification
+// Notifications systeme
+// ============================================
+
+model Notification {
+  id                Int              @id @default(autoincrement())
+
+  // Destinataire
+  destinataireId    Int              @map("destinataire_id")
+  destinataireType  String           @map("destinataire_type")
+
+  // Contenu
+  typeNotification  NotificationType @map("type_notification")
+  titre             String?
+  message           String           @db.Text
+
+  // Statut
+  lu                Boolean          @default(false)
+
+  // Contexte (optionnel)
+  contratId         Int?             @map("contrat_id")
+
+  // Timestamps
+  dateEnvoi         DateTime         @default(now()) @map("date_envoi")
+
+  // Relations
+  destinataire      User             @relation(fields: [destinataireId], references: [id], onDelete: Cascade)
+  contrat           Contrat?         @relation(fields: [contratId], references: [id], onDelete: SetNull)
+
+  @@map("notifications")
+  @@index([destinataireId])
+  @@index([typeNotification])
+  @@index([lu])
+  @@index([dateEnvoi])
+}
