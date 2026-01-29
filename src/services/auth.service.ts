@@ -28,8 +28,8 @@ export interface RegisterEntrepriseDTO {
   adresse?: string;
   ville?: string;
   codePostal?: string;
-  representantNom: string;
-  representantPrenom: string;
+  representantLegal: string;
+  formeJuridique?: string;
 }
 
 export interface LoginDTO {
@@ -177,6 +177,15 @@ export const authService = {
       throw new Error('EMAIL_ALREADY_EXISTS');
     }
 
+    // Verifier si le SIRET existe deja
+    const existingSiret = await prisma.entreprise.findUnique({
+      where: { siret: data.siret },
+    });
+
+    if (existingSiret) {
+      throw new Error('SIRET_ALREADY_EXISTS');
+    }
+
     // Hasher le mot de passe
     const hashedPassword = await authService.hashPassword(data.password);
 
@@ -189,8 +198,7 @@ export const authService = {
         email: data.email,
         password: hashedPassword,
         userType: UserType.ENTREPRISE,
-        nom: data.representantNom,
-        prenom: data.representantPrenom,
+        nom: data.representantLegal,
         telephone: data.telephone,
         adresse: data.adresse,
         ville: data.ville,
@@ -205,8 +213,8 @@ export const authService = {
             adresse: data.adresse,
             ville: data.ville,
             codePostal: data.codePostal,
-            representantNom: data.representantNom,
-            representantPrenom: data.representantPrenom,
+            representantLegal: data.representantLegal,
+            formeJuridique: data.formeJuridique,
             statutCompte: StatutCompte.EN_ATTENTE,
           },
         },
@@ -239,7 +247,6 @@ export const authService = {
         email: user.email,
         userType: user.userType,
         nom: user.nom,
-        prenom: user.prenom,
         referralCode: user.referralCode,
         entreprise: user.entreprise,
       },
@@ -281,7 +288,7 @@ export const authService = {
       userType: user.userType,
     });
 
-    // Creer/Mettre a jour la session
+    // Creer la session
     await prisma.session.create({
       data: {
         userId: user.id,
