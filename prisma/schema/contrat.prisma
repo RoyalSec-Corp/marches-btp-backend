@@ -33,7 +33,7 @@ model Contrat {
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
 
-  // Relations
+  // === Relations MVP1 ===
   entreprise            Entreprise          @relation(fields: [entrepriseId], references: [id], onDelete: Restrict)
   freelance             Freelance           @relation(fields: [freelanceId], references: [id], onDelete: Restrict)
   appelOffre            AppelOffre?         @relation(fields: [appelOffreId], references: [id], onDelete: SetNull)
@@ -41,6 +41,12 @@ model Contrat {
   documents             ContractDocument[]
   messages              Message[]
   notifications         Notification[]
+
+  // === Relations MVP2 ===
+  milestones            ContractMilestone[]
+  paiements             Paiement[]
+  avis                  Avis[]
+  litiges               Litige[]
 
   @@map("contrats")
   @@index([entrepriseId])
