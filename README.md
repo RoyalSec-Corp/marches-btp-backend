@@ -7,7 +7,7 @@ API REST pour la marketplace Marches BTP connectant freelances/artisans et entre
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js 5
 - **Langage**: TypeScript 5
-- **ORM**: Prisma
+- **ORM**: Prisma (avec prismaSchemaFolder)
 - **Base de donnees**: PostgreSQL
 - **Authentification**: JWT + Sessions
 - **Validation**: Zod + express-validator
@@ -17,9 +17,22 @@ API REST pour la marketplace Marches BTP connectant freelances/artisans et entre
 ```
 marches-btp-backend/
 ├── prisma/
-│   ├── schema.prisma      # Schema de la base de donnees (11 modeles)
-│   ├── migrations/        # Migrations Prisma
-│   └── seed.ts           # Donnees de test
+│   ├── schema/                    # Schema Prisma modulaire (13 fichiers)
+│   │   ├── 01_base.prisma         # Generator + Datasource
+│   │   ├── 02_enums.prisma        # Toutes les enumerations
+│   │   ├── 03_user.prisma         # Model User
+│   │   ├── 04_session.prisma      # Model Session
+│   │   ├── 05_freelance.prisma    # Model Freelance
+│   │   ├── 06_entreprise.prisma   # Model Entreprise
+│   │   ├── 07_appel_offre.prisma  # Model AppelOffre
+│   │   ├── 08_candidature.prisma  # Model AppelOffreCandidature
+│   │   ├── 09_contrat.prisma      # Model Contrat
+│   │   ├── 10_signature.prisma    # Model ContractSignature
+│   │   ├── 11_document.prisma     # Model ContractDocument
+│   │   ├── 12_message.prisma      # Model Message
+│   │   └── 13_notification.prisma # Model Notification
+│   ├── migrations/                # Migrations Prisma
+│   └── seed.ts                    # Donnees de test
 ├── src/
 │   ├── config/           # Configuration (env, database)
 │   ├── controllers/      # Controleurs (gestion requetes HTTP)
@@ -99,6 +112,26 @@ marches-btp-backend/
 
 ## 📊 Schema Base de Donnees (Sprint 2)
 
+### Architecture Modulaire Prisma
+
+Le schema est organise en **13 fichiers separes** dans `prisma/schema/` pour une meilleure maintenabilite:
+
+| Fichier | Contenu |
+|---------|---------|
+| `01_base.prisma` | Configuration generator et datasource |
+| `02_enums.prisma` | 10 enumerations (UserType, ContratStatus, etc.) |
+| `03_user.prisma` | Model User (authentification) |
+| `04_session.prisma` | Model Session (JWT) |
+| `05_freelance.prisma` | Model Freelance (profil artisan) |
+| `06_entreprise.prisma` | Model Entreprise (profil entreprise) |
+| `07_appel_offre.prisma` | Model AppelOffre |
+| `08_candidature.prisma` | Model AppelOffreCandidature |
+| `09_contrat.prisma` | Model Contrat |
+| `10_signature.prisma` | Model ContractSignature |
+| `11_document.prisma` | Model ContractDocument |
+| `12_message.prisma` | Model Message |
+| `13_notification.prisma` | Model Notification |
+
 ### Tables MVP 1 (11 modeles)
 
 | Table | Description |
@@ -115,7 +148,7 @@ marches-btp-backend/
 | `messages` | Messagerie |
 | `notifications` | Alertes systeme |
 
-### Enums
+### Enums (10)
 
 ```
 UserType: FREELANCE | ENTREPRISE | APPEL_OFFRE | ADMIN
@@ -207,7 +240,7 @@ TypeCandidature: FREELANCE | ENTREPRISE
 ## 📊 Sprints de Developpement
 
 - [x] **Sprint 1** : Setup & Architecture
-- [x] **Sprint 2** : Modeles Prisma & Migrations (11 modeles, 9 enums, seed)
+- [x] **Sprint 2** : Modeles Prisma & Migrations (11 modeles, 10 enums, schema modulaire)
 - [ ] **Sprint 3** : Authentification
 - [ ] **Sprint 4** : Inscription Utilisateurs
 - [ ] **Sprint 5** : Gestion des Contrats
