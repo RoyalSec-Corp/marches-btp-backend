@@ -1,0 +1,41 @@
+// ============================================
+// MarchesBTP - Models Milestones (MVP2)
+// ============================================
+
+model ContractMilestone {
+  id              Int               @id @default(autoincrement())
+  contratId       Int               @map("contrat_id")
+  
+  // Details
+  titre           String
+  description     String?           @db.Text
+  ordre           Int               @default(1)
+  
+  // Montant
+  montant         Float
+  pourcentage     Float?            @map("pourcentage")
+  
+  // Statut
+  statut          MilestoneStatus   @default(EN_ATTENTE)
+  
+  // Dates
+  dateEcheance    DateTime?         @map("date_echeance")
+  completedAt     DateTime?         @map("completed_at")
+  validatedAt     DateTime?         @map("validated_at")
+  
+  // Validation
+  validatedBy     Int?              @map("validated_by")
+  
+  // Timestamps
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  contrat         Contrat           @relation(fields: [contratId], references: [id], onDelete: Cascade)
+  paiements       Paiement[]
+
+  @@map("contract_milestones")
+  @@index([contratId])
+  @@index([statut])
+  @@index([ordre])
+}

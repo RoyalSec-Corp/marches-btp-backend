@@ -1,0 +1,49 @@
+// ============================================
+// MarchesBTP - Models Paiement (MVP2)
+// ============================================
+
+model Paiement {
+  id                Int             @id @default(autoincrement())
+  
+  // Contrat lie
+  contratId         Int             @map("contrat_id")
+  milestoneId       Int?            @map("milestone_id")
+  
+  // Montant
+  montant           Float
+  devise            String          @default("EUR")
+  
+  // Parties
+  payeurId          Int             @map("payeur_id")
+  payeurType        String          @map("payeur_type")
+  beneficiaireId    Int             @map("beneficiaire_id")
+  beneficiaireType  String          @map("beneficiaire_type")
+  
+  // Paiement externe (Societe Generale)
+  externalRef       String?         @map("external_ref")
+  paymentMethod     PaymentMethod   @default(VIREMENT) @map("payment_method")
+  
+  // Statut
+  statut            PaiementStatus  @default(EN_ATTENTE)
+  
+  // Dates
+  paidAt            DateTime?       @map("paid_at")
+  failedAt          DateTime?       @map("failed_at")
+  failureReason     String?         @map("failure_reason")
+  
+  // Timestamps
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  contrat           Contrat         @relation(fields: [contratId], references: [id], onDelete: Restrict)
+  milestone         ContractMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+
+  @@map("paiements")
+  @@index([contratId])
+  @@index([milestoneId])
+  @@index([payeurId])
+  @@index([beneficiaireId])
+  @@index([statut])
+  @@index([externalRef])
+}

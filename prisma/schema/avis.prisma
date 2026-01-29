@@ -1,0 +1,54 @@
+// ============================================
+// MarchesBTP - Model Avis/Notation (MVP2)
+// ============================================
+
+model Avis {
+  id              Int         @id @default(autoincrement())
+  
+  // Contrat lie (obligatoire pour laisser un avis)
+  contratId       Int         @map("contrat_id")
+  
+  // Auteur de l'avis
+  auteurId        Int         @map("auteur_id")
+  auteurType      String      @map("auteur_type")
+  
+  // Cible de l'avis
+  cibleId         Int         @map("cible_id")
+  cibleType       String      @map("cible_type")
+  
+  // Notation
+  noteGlobale     Int         @map("note_globale")  // 1-5
+  noteQualite     Int?        @map("note_qualite")  // 1-5
+  noteDelais      Int?        @map("note_delais")   // 1-5
+  noteCommunication Int?      @map("note_communication") // 1-5
+  notePrix        Int?        @map("note_prix")     // 1-5
+  
+  // Commentaire
+  commentaire     String?     @db.Text
+  
+  // Moderation
+  isPublic        Boolean     @default(true) @map("is_public")
+  isModerated     Boolean     @default(false) @map("is_moderated")
+  moderatedAt     DateTime?   @map("moderated_at")
+  moderatedBy     Int?        @map("moderated_by")
+  
+  // Reponse
+  reponse         String?     @db.Text
+  reponseAt       DateTime?   @map("reponse_at")
+  
+  // Timestamps
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  contrat         Contrat     @relation(fields: [contratId], references: [id], onDelete: Cascade)
+  auteur          User        @relation("AvisAuteur", fields: [auteurId], references: [id], onDelete: Cascade)
+
+  @@map("avis")
+  @@unique([contratId, auteurId])
+  @@index([contratId])
+  @@index([auteurId])
+  @@index([cibleId])
+  @@index([noteGlobale])
+  @@index([isPublic])
+}

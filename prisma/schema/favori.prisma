@@ -1,0 +1,29 @@
+// ============================================
+// MarchesBTP - Model Favoris (MVP2)
+// ============================================
+
+model Favori {
+  id              Int       @id @default(autoincrement())
+  
+  // Utilisateur qui ajoute en favori
+  userId          Int       @map("user_id")
+  
+  // Element mis en favori (freelance ou entreprise)
+  favoriId        Int       @map("favori_id")
+  favoriType      String    @map("favori_type")  // FREELANCE ou ENTREPRISE
+  
+  // Notes personnelles
+  notes           String?   @db.Text
+  
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("favoris")
+  @@unique([userId, favoriId, favoriType])
+  @@index([userId])
+  @@index([favoriId])
+  @@index([favoriType])
+}

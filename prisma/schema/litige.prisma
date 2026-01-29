@@ -1,0 +1,104 @@
+// ============================================
+// MarchesBTP - Model Litige (MVP2)
+// ============================================
+
+model Litige {
+  id              Int           @id @default(autoincrement())
+  
+  // Contrat concerne
+  contratId       Int           @map("contrat_id")
+  
+  // Demandeur
+  demandeurId     Int           @map("demandeur_id")
+  demandeurType   String        @map("demandeur_type")
+  
+  // Defendeur
+  defendeurId     Int           @map("defendeur_id")
+  defendeurType   String        @map("defendeur_type")
+  
+  // Details
+  objet           String
+  description     String        @db.Text
+  montantReclame  Float?        @map("montant_reclame")
+  
+  // Categorie
+  categorie       LitigeCategorie
+  
+  // Statut
+  statut          LitigeStatus  @default(OUVERT)
+  priorite        LitigePriorite @default(NORMALE)
+  
+  // Resolution
+  resolution      String?       @db.Text
+  resolvedAt      DateTime?     @map("resolved_at")
+  resolvedBy      Int?          @map("resolved_by")
+  
+  // Admin assigne
+  assignedTo      Int?          @map("assigned_to")
+  assignedAt      DateTime?     @map("assigned_at")
+  
+  // Timestamps
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  contrat         Contrat       @relation(fields: [contratId], references: [id], onDelete: Restrict)
+  demandeur       User          @relation("LitigeDemandeur", fields: [demandeurId], references: [id], onDelete: Cascade)
+  messages        LitigeMessage[]
+  documents       LitigeDocument[]
+
+  @@map("litiges")
+  @@index([contratId])
+  @@index([demandeurId])
+  @@index([defendeurId])
+  @@index([statut])
+  @@index([categorie])
+  @@index([assignedTo])
+}
+
+model LitigeMessage {
+  id              Int       @id @default(autoincrement())
+  litigeId        Int       @map("litige_id")
+  
+  // Auteur
+  auteurId        Int       @map("auteur_id")
+  auteurType      String    @map("auteur_type")
+  
+  // Contenu
+  message         String    @db.Text
+  isInternal      Boolean   @default(false) @map("is_internal")
+  
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  litige          Litige    @relation(fields: [litigeId], references: [id], onDelete: Cascade)
+  auteur          User      @relation(fields: [auteurId], references: [id], onDelete: Cascade)
+
+  @@map("litige_messages")
+  @@index([litigeId])
+  @@index([auteurId])
+}
+
+model LitigeDocument {
+  id              Int       @id @default(autoincrement())
+  litigeId        Int       @map("litige_id")
+  
+  // Document
+  documentName    String    @map("document_name")
+  filePath        String    @map("file_path")
+  fileSize        Int?      @map("file_size")
+  mimeType        String?   @map("mime_type")
+  
+  // Auteur
+  uploadedBy      Int       @map("uploaded_by")
+  
+  // Timestamps
+  uploadedAt      DateTime  @default(now()) @map("uploaded_at")
+
+  // Relations
+  litige          Litige    @relation(fields: [litigeId], references: [id], onDelete: Cascade)
+
+  @@map("litige_documents")
+  @@index([litigeId])
+}
