@@ -2,6 +2,8 @@
 // MarchesBTP - Enumerations
 // ============================================
 
+// === MVP1 ===
+
 enum UserType {
   FREELANCE
   ENTREPRISE
@@ -45,6 +47,9 @@ enum NotificationType {
   MESSAGE
   APPEL_OFFRE
   CANDIDATURE
+  PAIEMENT
+  LITIGE
+  REFERRAL
   SYSTEME
 }
 
@@ -67,4 +72,85 @@ enum SignerType {
 enum TypeCandidature {
   FREELANCE
   ENTREPRISE
+}
+
+// === MVP2 - Parrainage ===
+
+enum ReferralStatus {
+  PENDING
+  VALIDATED
+  CANCELLED
+  EXPIRED
+}
+
+enum RewardType {
+  CASH
+  CREDIT
+  DISCOUNT
+  FREE_MONTH
+}
+
+enum RewardStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+// === MVP2 - Paiement ===
+
+enum PaiementStatus {
+  EN_ATTENTE
+  EN_COURS
+  VALIDE
+  ECHOUE
+  REMBOURSE
+  ANNULE
+}
+
+enum PaymentMethod {
+  VIREMENT
+  CARTE
+  PRELEVEMENT
+  CHEQUE
+}
+
+// === MVP2 - Milestones ===
+
+enum MilestoneStatus {
+  EN_ATTENTE
+  EN_COURS
+  COMPLETE
+  VALIDE
+  REFUSE
+  ANNULE
+}
+
+// === MVP2 - Litiges ===
+
+enum LitigeCategorie {
+  QUALITE_TRAVAIL
+  RETARD
+  NON_PAIEMENT
+  ABANDON_CHANTIER
+  MALFACON
+  COMMUNICATION
+  AUTRE
+}
+
+enum LitigeStatus {
+  OUVERT
+  EN_COURS
+  EN_ATTENTE_REPONSE
+  MEDIATION
+  RESOLU
+  FERME
+  ESCALE
+}
+
+enum LitigePriorite {
+  BASSE
+  NORMALE
+  HAUTE
+  URGENTE
 }
