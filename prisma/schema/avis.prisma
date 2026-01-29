@@ -44,6 +44,9 @@ model Avis {
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
+  // Relations
+  contrat         Contrat     @relation(fields: [contratId], references: [id], onDelete: Cascade)
+
   @@map("avis")
   @@unique([contratId, auteurId])
   @@index([contratId])
