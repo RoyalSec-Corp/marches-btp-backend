@@ -20,6 +20,9 @@ model Freelance {
   experienceYears   Int?             @map("experience_years")
   description       String?          @db.Text
 
+  // Disponibilités par jour (JSON: { "Lundi": { "disponible": true, "heureDebut": "08:00", "heureFin": "18:00" }, ... })
+  disponibilites    Json?            @map("disponibilites_semaine")
+
   // Documents legaux
   siret             String?
   kbisPath          String?          @map("kbis_path")
