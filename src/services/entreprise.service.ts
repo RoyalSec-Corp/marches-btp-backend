@@ -23,7 +23,7 @@ class EntrepriseService {
   /**
    * Récupérer une entreprise par son ID utilisateur
    */
-  async findByUserId(userId: string): Promise<EntrepriseWithUser | null> {
+  async findByUserId(userId: number): Promise<EntrepriseWithUser | null> {
     return prisma.entreprise.findUnique({
       where: { userId },
       include: { user: true },
@@ -35,7 +35,7 @@ class EntrepriseService {
    */
   async findById(id: string): Promise<EntrepriseWithUser | null> {
     return prisma.entreprise.findUnique({
-      where: { id },
+      where: { id: parseInt(id, 10) },
       include: { user: true },
     });
   }
@@ -72,7 +72,7 @@ class EntrepriseService {
         include: { user: true },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { dateInscription: 'desc' },
       }),
       prisma.entreprise.count({ where }),
     ]);
@@ -88,7 +88,7 @@ class EntrepriseService {
   /**
    * Mettre à jour le profil d'une entreprise
    */
-  async updateProfile(userId: string, data: UpdateEntrepriseData): Promise<EntrepriseWithUser> {
+  async updateProfile(userId: number, data: UpdateEntrepriseData): Promise<EntrepriseWithUser> {
     // Vérifier que l'entreprise existe
     const existing = await prisma.entreprise.findUnique({
       where: { userId },
@@ -111,22 +111,23 @@ class EntrepriseService {
       }
     }
 
+    // Construire les données de mise à jour (uniquement les champs définis)
+    const updateData: any = {};
+    if (data.raisonSociale !== undefined) updateData.raisonSociale = data.raisonSociale;
+    if (data.siret !== undefined) updateData.siret = data.siret;
+    if (data.representantLegal !== undefined) updateData.representantLegal = data.representantLegal;
+    if (data.telephone !== undefined) updateData.telephone = data.telephone;
+    if (data.adresse !== undefined) updateData.adresse = data.adresse;
+    if (data.ville !== undefined) updateData.ville = data.ville;
+    if (data.codePostal !== undefined) updateData.codePostal = data.codePostal;
+    if (data.formeJuridique !== undefined) updateData.formeJuridique = data.formeJuridique;
+    if (data.siteWeb !== undefined) updateData.siteWeb = data.siteWeb;
+    if (data.description !== undefined) updateData.description = data.description;
+
     // Mettre à jour l'entreprise
     const updated = await prisma.entreprise.update({
       where: { userId },
-      data: {
-        raisonSociale: data.raisonSociale,
-        siret: data.siret,
-        representantLegal: data.representantLegal,
-        telephone: data.telephone,
-        adresse: data.adresse,
-        ville: data.ville,
-        codePostal: data.codePostal,
-        formeJuridique: data.formeJuridique,
-        siteWeb: data.siteWeb,
-        description: data.description,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: { user: true },
     });
 
@@ -158,7 +159,7 @@ class EntrepriseService {
         include: { user: true },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { dateInscription: 'desc' },
       }),
       prisma.entreprise.count({ where }),
     ]);
