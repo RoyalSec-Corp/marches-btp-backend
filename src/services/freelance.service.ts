@@ -2,6 +2,23 @@ import { PrismaClient, Freelance, User } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Structure des disponibilités par jour
+export interface DisponibiliteJour {
+  disponible: boolean;
+  heureDebut?: string;
+  heureFin?: string;
+}
+
+export interface DisponibilitesSemaine {
+  Lundi?: DisponibiliteJour;
+  Mardi?: DisponibiliteJour;
+  Mercredi?: DisponibiliteJour;
+  Jeudi?: DisponibiliteJour;
+  Vendredi?: DisponibiliteJour;
+  Samedi?: DisponibiliteJour;
+  Dimanche?: DisponibiliteJour;
+}
+
 export interface UpdateFreelanceData {
   nom?: string;
   prenom?: string;
@@ -14,6 +31,8 @@ export interface UpdateFreelanceData {
   ville?: string;
   codePostal?: string;
   disponible?: boolean;
+  disponibilites?: DisponibilitesSemaine;
+  experienceYears?: number;
 }
 
 export interface FreelanceWithUser extends Freelance {
@@ -101,6 +120,8 @@ class FreelanceService {
     if (data.siret !== undefined) updateData.siret = data.siret;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.disponible !== undefined) updateData.disponible = data.disponible;
+    if (data.disponibilites !== undefined) updateData.disponibilites = data.disponibilites;
+    if (data.experienceYears !== undefined) updateData.experienceYears = data.experienceYears;
 
     // Mettre à jour le freelance
     const updated = await prisma.freelance.update({
