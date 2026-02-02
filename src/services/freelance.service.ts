@@ -24,7 +24,7 @@ class FreelanceService {
   /**
    * Récupérer un freelance par son ID utilisateur
    */
-  async findByUserId(userId: string): Promise<FreelanceWithUser | null> {
+  async findByUserId(userId: number): Promise<FreelanceWithUser | null> {
     return prisma.freelance.findUnique({
       where: { userId },
       include: { user: true },
@@ -36,7 +36,7 @@ class FreelanceService {
    */
   async findById(id: string): Promise<FreelanceWithUser | null> {
     return prisma.freelance.findUnique({
-      where: { id },
+      where: { id: parseInt(id, 10) },
       include: { user: true },
     });
   }
@@ -65,7 +65,7 @@ class FreelanceService {
         include: { user: true },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { dateInscription: 'desc' },
       }),
       prisma.freelance.count({ where }),
     ]);
@@ -81,7 +81,7 @@ class FreelanceService {
   /**
    * Mettre à jour le profil d'un freelance
    */
-  async updateProfile(userId: string, data: UpdateFreelanceData): Promise<FreelanceWithUser> {
+  async updateProfile(userId: number, data: UpdateFreelanceData): Promise<FreelanceWithUser> {
     // Vérifier que le freelance existe
     const existing = await prisma.freelance.findUnique({
       where: { userId },
@@ -91,25 +91,36 @@ class FreelanceService {
       throw new Error('Profil freelance non trouvé');
     }
 
+    // Construire les données de mise à jour (uniquement les champs définis)
+    const updateData: any = {};
+    if (data.nom !== undefined) updateData.nom = data.nom;
+    if (data.prenom !== undefined) updateData.prenom = data.prenom;
+    if (data.telephone !== undefined) updateData.telephone = data.telephone;
+    if (data.metier !== undefined) updateData.metier = data.metier;
+    if (data.tarif !== undefined) updateData.tarif = data.tarif;
+    if (data.siret !== undefined) updateData.siret = data.siret;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.disponible !== undefined) updateData.disponible = data.disponible;
+
     // Mettre à jour le freelance
     const updated = await prisma.freelance.update({
       where: { userId },
-      data: {
-        nom: data.nom,
-        prenom: data.prenom,
-        telephone: data.telephone,
-        metier: data.metier,
-        tarif: data.tarif,
-        siret: data.siret,
-        description: data.description,
-        adresse: data.adresse,
-        ville: data.ville,
-        codePostal: data.codePostal,
-        disponible: data.disponible,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       include: { user: true },
     });
+
+    // Mettre à jour aussi les champs adresse dans User si fournis
+    if (data.adresse !== undefined || data.ville !== undefined || data.codePostal !== undefined) {
+      const userUpdateData: any = {};
+      if (data.adresse !== undefined) userUpdateData.adresse = data.adresse;
+      if (data.ville !== undefined) userUpdateData.ville = data.ville;
+      if (data.codePostal !== undefined) userUpdateData.codePostal = data.codePostal;
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: userUpdateData,
+      });
+    }
 
     return updated;
   }
@@ -117,10 +128,10 @@ class FreelanceService {
   /**
    * Mettre à jour la disponibilité d'un freelance
    */
-  async updateDisponibilite(userId: string, disponible: boolean): Promise<Freelance> {
+  async updateDisponibilite(userId: number, disponible: boolean): Promise<Freelance> {
     return prisma.freelance.update({
       where: { userId },
-      data: { disponible, updatedAt: new Date() },
+      data: { disponible },
     });
   }
 
@@ -139,7 +150,6 @@ class FreelanceService {
         { nom: { contains: query, mode: 'insensitive' as const } },
         { prenom: { contains: query, mode: 'insensitive' as const } },
         { metier: { contains: query, mode: 'insensitive' as const } },
-        { ville: { contains: query, mode: 'insensitive' as const } },
         { description: { contains: query, mode: 'insensitive' as const } },
       ],
     };
@@ -150,7 +160,7 @@ class FreelanceService {
         include: { user: true },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { dateInscription: 'desc' },
       }),
       prisma.freelance.count({ where }),
     ]);
