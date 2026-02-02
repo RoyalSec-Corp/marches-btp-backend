@@ -10,6 +10,8 @@ import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
 // Import des routes
 import authRoutes from './routes/auth.routes.js';
+import freelanceRoutes from './routes/freelance.routes.js';
+import entrepriseRoutes from './routes/entreprise.routes.js';
 
 // Creer l'application Express
 const app: Application = express();
@@ -51,11 +53,11 @@ if (env.NODE_ENV === 'development') {
 
 // ===== ROUTES API =====
 app.use('/api/auth', authRoutes);
+app.use('/api/freelances', freelanceRoutes);
+app.use('/api/entreprises', entrepriseRoutes);
 
-// TODO: Sprint 4 - Ajouter les autres routes
+// TODO: Sprint 5+ - Ajouter les autres routes
 // app.use('/api/users', userRoutes);
-// app.use('/api/freelances', freelanceRoutes);
-// app.use('/api/entreprises', entrepriseRoutes);
 // app.use('/api/contrats', contratRoutes);
 // app.use('/api/appels-offres', appelOffreRoutes);
 // app.use('/api/notifications', notificationRoutes);
@@ -77,6 +79,8 @@ app.get('/', (_req, res) => {
     documentation: '/api/docs',
     endpoints: {
       auth: '/api/auth',
+      freelances: '/api/freelances',
+      entreprises: '/api/entreprises',
       health: '/health',
     },
   });
