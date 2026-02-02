@@ -1,37 +1,17 @@
 import { Router } from 'express';
+import { entrepriseController } from '../controllers/entreprise.controller.js';
+import { authenticate, requireEntreprise } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// GET /api/entreprises - Liste des entreprises
-router.get('/', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 4',
-    endpoint: 'GET /api/entreprises'
-  });
-});
+// Routes protégées (entreprise connectée) - AVANT les routes avec paramètres
+router.get('/profile', authenticate, requireEntreprise, entrepriseController.getMyProfile);
+router.put('/profile', authenticate, requireEntreprise, entrepriseController.updateMyProfile);
 
-// GET /api/entreprises/:id - Détails d'une entreprise
-router.get('/:id', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 4',
-    endpoint: 'GET /api/entreprises/:id'
-  });
-});
-
-// POST /api/entreprises - Créer un profil entreprise
-router.post('/', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 4',
-    endpoint: 'POST /api/entreprises'
-  });
-});
-
-// PUT /api/entreprises/:id - Mettre à jour un profil entreprise
-router.put('/:id', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 4',
-    endpoint: 'PUT /api/entreprises/:id'
-  });
-});
+// Routes publiques
+router.get('/search', entrepriseController.search);
+router.get('/siret/:siret', entrepriseController.getBySiret);
+router.get('/', entrepriseController.listAll);
+router.get('/:id', entrepriseController.getById);
 
 export default router;
