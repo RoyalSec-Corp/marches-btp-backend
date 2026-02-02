@@ -51,6 +51,8 @@ class FreelanceController {
         ville,
         codePostal,
         disponible,
+        disponibilites,
+        experienceYears,
       } = req.body;
 
       const updated = await freelanceService.updateProfile(userId, {
@@ -65,6 +67,8 @@ class FreelanceController {
         ville,
         codePostal,
         disponible,
+        disponibilites,
+        experienceYears: experienceYears ? parseInt(experienceYears) : undefined,
       });
 
       res.json({
