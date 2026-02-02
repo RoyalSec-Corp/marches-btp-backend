@@ -1,11 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 
+// Type pour les requêtes authentifiées
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+    userId: number; // alias pour compatibilité
+    email: string;
+    userType: string;
+  };
+}
+
 // Etendre le type Request pour inclure user
 declare global {
   namespace Express {
     interface Request {
       user?: {
+        id: number;
         userId: number;
         email: string;
         userType: string;
@@ -38,7 +49,13 @@ export const authenticate = async (
 
     try {
       const payload = authService.verifyAccessToken(token);
-      req.user = payload;
+      // Normaliser: utiliser id ET userId pour compatibilité
+      req.user = {
+        id: payload.userId,
+        userId: payload.userId,
+        email: payload.email,
+        userType: payload.userType,
+      };
       next();
     } catch (error) {
       return res.status(401).json({
@@ -68,7 +85,12 @@ export const optionalAuth = async (
       const token = authHeader.split(' ')[1];
       try {
         const payload = authService.verifyAccessToken(token);
-        req.user = payload;
+        req.user = {
+          id: payload.userId,
+          userId: payload.userId,
+          email: payload.email,
+          userType: payload.userType,
+        };
       } catch (error) {
         // Token invalide, on continue sans user
       }
