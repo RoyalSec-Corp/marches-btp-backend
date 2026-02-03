@@ -423,7 +423,7 @@ async function main() {
   await prisma.contractSignature.create({
     data: {
       contratId: contrat1.id,
-      signerId: freelance2.id,
+      freelanceId: freelance2.id,
       signerType: SignerType.FREELANCE,
       signerName: 'Marie Martin',
       ipAddress: '192.168.1.100',
@@ -433,7 +433,7 @@ async function main() {
   await prisma.contractSignature.create({
     data: {
       contratId: contrat1.id,
-      signerId: entreprise2.id,
+      entrepriseId: entreprise2.id,
       signerType: SignerType.ENTREPRISE,
       signerName: "Sophie Moreau - Renov'Expert SARL",
       ipAddress: '192.168.1.200',

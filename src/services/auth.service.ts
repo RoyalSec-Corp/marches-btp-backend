@@ -32,6 +32,23 @@ export interface RegisterEntrepriseDTO {
   formeJuridique?: string;
 }
 
+export interface RegisterAppelOffreDTO {
+  email: string;
+  password: string;
+  entityType: 'individual' | 'company';
+  // Personne Physique
+  nom?: string;
+  prenom?: string;
+  telephone?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  // Personne Morale
+  companyName?: string;
+  siret?: string;
+  legalForm?: string;
+}
+
 export interface LoginDTO {
   email: string;
   password: string;
@@ -69,11 +86,11 @@ export const authService = {
   // Generer les tokens JWT
   generateTokens: (payload: TokenPayload): AuthTokens => {
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN || '15m',
+      expiresIn: (env.JWT_EXPIRES_IN || '15m') as jwt.SignOptions['expiresIn'],
     });
 
     const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN || '7d',
+      expiresIn: (env.JWT_REFRESH_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'],
     });
 
     return { accessToken, refreshToken };
@@ -254,6 +271,73 @@ export const authService = {
     };
   },
 
+  // Inscription Appel d'Offre (Porteur de projet)
+  registerAppelOffre: async (data: RegisterAppelOffreDTO) => {
+    // Verifier si l'email existe deja
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new Error('EMAIL_ALREADY_EXISTS');
+    }
+
+    // Hasher le mot de passe
+    const hashedPassword = await authService.hashPassword(data.password);
+
+    // Generer un code de parrainage
+    const referralCode = authService.generateReferralCode();
+
+    // Determiner les donnees selon le type d'entite
+    const isCompany = data.entityType === 'company';
+
+    // Creer l'utilisateur
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        userType: UserType.APPEL_OFFRE,
+        nom: isCompany ? data.companyName : data.nom,
+        prenom: isCompany ? undefined : data.prenom,
+        telephone: data.telephone,
+        adresse: data.address,
+        ville: data.city,
+        codePostal: data.postalCode,
+        referralCode,
+      },
+    });
+
+    // Generer les tokens
+    const tokens = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      userType: user.userType,
+    });
+
+    // Creer la session
+    await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: tokens.refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        userAgent: 'API',
+      },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        userType: user.userType,
+        nom: user.nom,
+        prenom: user.prenom,
+        referralCode: user.referralCode,
+        entityType: data.entityType,
+      },
+      tokens,
+    };
+  },
+
   // Connexion
   login: async (data: LoginDTO, userAgent?: string) => {
     // Trouver l'utilisateur
@@ -381,7 +465,8 @@ export const authService = {
     }
 
     // Ne pas renvoyer le mot de passe
-    const { password, ...userWithoutPassword } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   },
 

@@ -8,8 +8,8 @@ import { env } from './config/env.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
-// Import des routes
-import authRoutes from './routes/auth.routes.js';
+// Import des routes centralisées
+import routes from './routes/index.js';
 import freelanceRoutes from './routes/freelance.routes.js';
 import entrepriseRoutes from './routes/entreprise.routes.js';
 
@@ -52,15 +52,12 @@ if (env.NODE_ENV === 'development') {
 }
 
 // ===== ROUTES API =====
-app.use('/api/auth', authRoutes);
+// Routes centralisées (auth, admin, calls-for-tenders)
+app.use('/api', routes);
+
+// Routes additionnelles
 app.use('/api/freelances', freelanceRoutes);
 app.use('/api/entreprises', entrepriseRoutes);
-
-// TODO: Sprint 5+ - Ajouter les autres routes
-// app.use('/api/users', userRoutes);
-// app.use('/api/contrats', contratRoutes);
-// app.use('/api/appels-offres', appelOffreRoutes);
-// app.use('/api/notifications', notificationRoutes);
 
 // ===== ROUTE HEALTH CHECK =====
 app.get('/health', (_req, res) => {
@@ -79,6 +76,8 @@ app.get('/', (_req, res) => {
     documentation: '/api/docs',
     endpoints: {
       auth: '/api/auth',
+      admin: '/api/admin',
+      callsForTenders: '/api/calls-for-tenders',
       freelances: '/api/freelances',
       entreprises: '/api/entreprises',
       health: '/health',

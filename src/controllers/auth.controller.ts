@@ -46,6 +46,28 @@ export const authController = {
     }
   },
 
+  // POST /api/auth/register_appel_offre
+  registerAppelOffre: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await authService.registerAppelOffre(req.body);
+
+      res.status(201).json({
+        success: true,
+        message: "Inscription reussie. Vous pouvez maintenant publier des appels d'offres.",
+        data: result,
+      });
+    } catch (error: any) {
+      if (error.message === 'EMAIL_ALREADY_EXISTS') {
+        return res.status(409).json({
+          success: false,
+          message: 'Cet email est deja utilise.',
+          error: 'EMAIL_ALREADY_EXISTS',
+        });
+      }
+      next(error);
+    }
+  },
+
   // POST /api/auth/login
   login: async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -158,7 +180,7 @@ export const authController = {
   },
 
   // GET /api/auth/verify
-  verifyToken: async (req: Request, res: Response, next: NextFunction) => {
+  verifyToken: async (req: Request, res: Response, _next: NextFunction) => {
     try {
       const userId = (req as any).user?.userId;
 
@@ -176,7 +198,7 @@ export const authController = {
         success: true,
         data: user,
       });
-    } catch (error) {
+    } catch {
       return res.status(401).json({
         success: false,
         message: 'Token invalide.',

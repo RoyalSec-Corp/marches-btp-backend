@@ -14,6 +14,11 @@ export interface UpdateFreelanceData {
   ville?: string;
   codePostal?: string;
   disponible?: boolean;
+  experience?: number;
+  diplome?: string;
+  certifications?: string[];
+  specialites?: string[];
+  mobilite?: number;
 }
 
 export interface FreelanceWithUser extends Freelance {
@@ -44,20 +49,29 @@ class FreelanceService {
   /**
    * Lister tous les freelances (avec pagination)
    */
-  async findAll(options: {
-    page?: number;
-    limit?: number;
-    metier?: string;
-    ville?: string;
-    disponible?: boolean;
-  } = {}): Promise<{ freelances: FreelanceWithUser[]; total: number; page: number; totalPages: number }> {
+  async findAll(
+    options: {
+      page?: number;
+      limit?: number;
+      metier?: string;
+      ville?: string;
+      disponible?: boolean;
+    } = {}
+  ): Promise<{ freelances: FreelanceWithUser[]; total: number; page: number; totalPages: number }> {
     const { page = 1, limit = 10, metier, ville, disponible } = options;
     const skip = (page - 1) * limit;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
-    if (metier) where.metier = { contains: metier, mode: 'insensitive' };
-    if (ville) where.ville = { contains: ville, mode: 'insensitive' };
-    if (disponible !== undefined) where.disponible = disponible;
+    if (metier) {
+      where.metier = { contains: metier, mode: 'insensitive' };
+    }
+    if (ville) {
+      where.ville = { contains: ville, mode: 'insensitive' };
+    }
+    if (disponible !== undefined) {
+      where.disponible = disponible;
+    }
 
     const [freelances, total] = await Promise.all([
       prisma.freelance.findMany({
@@ -79,28 +93,75 @@ class FreelanceService {
   }
 
   /**
-   * Mettre à jour le profil d'un freelance
+   * Récupérer les freelances recommandés
    */
-  async updateProfile(userId: number, data: UpdateFreelanceData): Promise<FreelanceWithUser> {
+  async findRecommended(limit: number = 10): Promise<FreelanceWithUser[]> {
+    return prisma.freelance.findMany({
+      where: { disponible: true },
+      include: { user: true },
+      take: limit,
+      orderBy: [{ noteGlobale: 'desc' }, { dateInscription: 'desc' }],
+    });
+  }
+
+  /**
+   * Mettre à jour le profil d'un freelance par userId
+   */
+  async updateByUserId(
+    userId: number,
+    data: UpdateFreelanceData
+  ): Promise<FreelanceWithUser | null> {
     // Vérifier que le freelance existe
     const existing = await prisma.freelance.findUnique({
       where: { userId },
     });
 
     if (!existing) {
-      throw new Error('Profil freelance non trouvé');
+      return null;
     }
 
     // Construire les données de mise à jour (uniquement les champs définis)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
-    if (data.nom !== undefined) updateData.nom = data.nom;
-    if (data.prenom !== undefined) updateData.prenom = data.prenom;
-    if (data.telephone !== undefined) updateData.telephone = data.telephone;
-    if (data.metier !== undefined) updateData.metier = data.metier;
-    if (data.tarif !== undefined) updateData.tarif = data.tarif;
-    if (data.siret !== undefined) updateData.siret = data.siret;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.disponible !== undefined) updateData.disponible = data.disponible;
+    if (data.nom !== undefined) {
+      updateData.nom = data.nom;
+    }
+    if (data.prenom !== undefined) {
+      updateData.prenom = data.prenom;
+    }
+    if (data.telephone !== undefined) {
+      updateData.telephone = data.telephone;
+    }
+    if (data.metier !== undefined) {
+      updateData.metier = data.metier;
+    }
+    if (data.tarif !== undefined) {
+      updateData.tarif = data.tarif;
+    }
+    if (data.siret !== undefined) {
+      updateData.siret = data.siret;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
+    if (data.disponible !== undefined) {
+      updateData.disponible = data.disponible;
+    }
+    if (data.experience !== undefined) {
+      updateData.experience = data.experience;
+    }
+    if (data.diplome !== undefined) {
+      updateData.diplome = data.diplome;
+    }
+    if (data.certifications !== undefined) {
+      updateData.certifications = data.certifications;
+    }
+    if (data.specialites !== undefined) {
+      updateData.specialites = data.specialites;
+    }
+    if (data.mobilite !== undefined) {
+      updateData.mobilite = data.mobilite;
+    }
 
     // Mettre à jour le freelance
     const updated = await prisma.freelance.update({
@@ -111,10 +172,17 @@ class FreelanceService {
 
     // Mettre à jour aussi les champs adresse dans User si fournis
     if (data.adresse !== undefined || data.ville !== undefined || data.codePostal !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const userUpdateData: any = {};
-      if (data.adresse !== undefined) userUpdateData.adresse = data.adresse;
-      if (data.ville !== undefined) userUpdateData.ville = data.ville;
-      if (data.codePostal !== undefined) userUpdateData.codePostal = data.codePostal;
+      if (data.adresse !== undefined) {
+        userUpdateData.adresse = data.adresse;
+      }
+      if (data.ville !== undefined) {
+        userUpdateData.ville = data.ville;
+      }
+      if (data.codePostal !== undefined) {
+        userUpdateData.codePostal = data.codePostal;
+      }
 
       await prisma.user.update({
         where: { id: userId },
@@ -123,6 +191,16 @@ class FreelanceService {
     }
 
     return updated;
+  }
+
+  /**
+   * Mettre à jour le profil d'un freelance (alias pour compatibilité)
+   */
+  async updateProfile(
+    userId: number,
+    data: UpdateFreelanceData
+  ): Promise<FreelanceWithUser | null> {
+    return this.updateByUserId(userId, data);
   }
 
   /**
@@ -138,7 +216,10 @@ class FreelanceService {
   /**
    * Rechercher des freelances par critères
    */
-  async search(query: string, options: { page?: number; limit?: number } = {}): Promise<{
+  async search(
+    query: string,
+    options: { page?: number; limit?: number } = {}
+  ): Promise<{
     freelances: FreelanceWithUser[];
     total: number;
   }> {

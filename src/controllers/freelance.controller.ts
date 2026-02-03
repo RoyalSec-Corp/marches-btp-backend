@@ -50,39 +50,82 @@ class FreelanceController {
         adresse,
         ville,
         codePostal,
+        experience,
+        diplome,
+        certifications,
+        specialites,
         disponible,
+        mobilite,
       } = req.body;
 
-      const updated = await freelanceService.updateProfile(userId, {
-        nom,
-        prenom,
-        telephone,
-        metier,
-        tarif: tarif ? parseFloat(tarif) : undefined,
-        siret,
-        description,
-        adresse,
-        ville,
-        codePostal,
-        disponible,
-      });
+      const updateData: Record<string, unknown> = {};
+      if (nom !== undefined) {
+        updateData.nom = nom;
+      }
+      if (prenom !== undefined) {
+        updateData.prenom = prenom;
+      }
+      if (telephone !== undefined) {
+        updateData.telephone = telephone;
+      }
+      if (metier !== undefined) {
+        updateData.metier = metier;
+      }
+      if (tarif !== undefined) {
+        updateData.tarif = parseFloat(tarif);
+      }
+      if (siret !== undefined) {
+        updateData.siret = siret;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      if (adresse !== undefined) {
+        updateData.adresse = adresse;
+      }
+      if (ville !== undefined) {
+        updateData.ville = ville;
+      }
+      if (codePostal !== undefined) {
+        updateData.codePostal = codePostal;
+      }
+      if (experience !== undefined) {
+        updateData.experience = parseInt(experience, 10);
+      }
+      if (diplome !== undefined) {
+        updateData.diplome = diplome;
+      }
+      if (certifications !== undefined) {
+        updateData.certifications = certifications;
+      }
+      if (specialites !== undefined) {
+        updateData.specialites = specialites;
+      }
+      if (disponible !== undefined) {
+        updateData.disponible = disponible;
+      }
+      if (mobilite !== undefined) {
+        updateData.mobilite = parseInt(mobilite, 10);
+      }
+
+      const freelance = await freelanceService.updateByUserId(userId, updateData);
+      if (!freelance) {
+        return res.status(404).json({ success: false, message: 'Profil freelance non trouvé' });
+      }
 
       res.json({
         success: true,
         message: 'Profil mis à jour avec succès',
-        data: updated,
+        data: freelance,
       });
-    } catch (error: any) {
-      if (error.message === 'Profil freelance non trouvé') {
-        return res.status(404).json({ success: false, message: error.message });
-      }
+    } catch (error) {
       next(error);
     }
   }
 
   /**
    * PATCH /api/freelances/disponibilite
-   * Mettre à jour la disponibilité du freelance
+   * Mettre à jour la disponibilité du freelance connecté
    */
   async updateDisponibilite(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
@@ -92,16 +135,19 @@ class FreelanceController {
       }
 
       const { disponible } = req.body;
-      if (typeof disponible !== 'boolean') {
-        return res.status(400).json({ success: false, message: 'Le champ disponible doit être un booléen' });
+      if (disponible === undefined) {
+        return res.status(400).json({ success: false, message: 'Disponibilité requise' });
       }
 
-      const updated = await freelanceService.updateDisponibilite(userId, disponible);
+      const freelance = await freelanceService.updateDisponibilite(userId, Boolean(disponible));
+      if (!freelance) {
+        return res.status(404).json({ success: false, message: 'Profil freelance non trouvé' });
+      }
 
       res.json({
         success: true,
-        message: `Disponibilité mise à jour: ${disponible ? 'disponible' : 'indisponible'}`,
-        data: { disponible: updated.disponible },
+        message: 'Disponibilité mise à jour avec succès',
+        data: freelance,
       });
     } catch (error) {
       next(error);
@@ -115,21 +161,83 @@ class FreelanceController {
   async listAll(req: Request, res: Response, next: NextFunction) {
     try {
       const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-      const metier = req.query.metier as string;
-      const ville = req.query.ville as string;
-      const disponible = req.query.disponible === 'true' ? true : req.query.disponible === 'false' ? false : undefined;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const metier = req.query.metier as string | undefined;
+      const ville = req.query.ville as string | undefined;
+      const disponibleParam = req.query.disponible as string | undefined;
 
-      const result = await freelanceService.findAll({ page, limit, metier, ville, disponible });
+      // Convertir en boolean si fourni
+      let disponible: boolean | undefined;
+      if (disponibleParam !== undefined) {
+        disponible = disponibleParam === 'true';
+      }
+
+      const { freelances, total } = await freelanceService.findAll({
+        page,
+        limit,
+        metier,
+        ville,
+        disponible,
+      });
 
       res.json({
         success: true,
-        data: result.freelances,
+        data: freelances,
         pagination: {
-          page: result.page,
+          page,
           limit,
-          total: result.total,
-          totalPages: result.totalPages,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/freelances/recommended
+   * Récupérer les freelances recommandés (public)
+   */
+  async getRecommended(req: Request, res: Response, next: NextFunction) {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const freelances = await freelanceService.findRecommended(limit);
+
+      res.json({
+        success: true,
+        data: freelances,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/freelances/search
+   * Rechercher des freelances (public)
+   */
+  async search(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = req.query.q as string;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      if (!query) {
+        return res.status(400).json({ success: false, message: 'Paramètre de recherche requis' });
+      }
+
+      const { freelances, total } = await freelanceService.search(query, { page, limit });
+
+      res.json({
+        success: true,
+        data: freelances,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       });
     } catch (error) {
@@ -143,7 +251,14 @@ class FreelanceController {
    */
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
+
+      // Vérifier que l'ID est un nombre valide
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) {
+        return res.status(400).json({ success: false, message: 'ID invalide' });
+      }
+
       const freelance = await freelanceService.findById(id);
 
       if (!freelance) {
@@ -158,33 +273,6 @@ class FreelanceController {
       next(error);
     }
   }
-
-  /**
-   * GET /api/freelances/search
-   * Rechercher des freelances
-   */
-  async search(req: Request, res: Response, next: NextFunction) {
-    try {
-      const query = req.query.q as string;
-      if (!query || query.trim().length < 2) {
-        return res.status(400).json({ success: false, message: 'La recherche doit contenir au moins 2 caractères' });
-      }
-
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-
-      const result = await freelanceService.search(query.trim(), { page, limit });
-
-      res.json({
-        success: true,
-        data: result.freelances,
-        total: result.total,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
 }
 
 export const freelanceController = new FreelanceController();
-export default freelanceController;

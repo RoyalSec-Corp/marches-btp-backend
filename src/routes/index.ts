@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes.js';
+import adminRoutes from './admin.routes.js';
+import appelOffreRoutes from './appel-offre.routes.js';
 
 const router = Router();
 
@@ -16,11 +18,16 @@ router.get('/health', (req, res) => {
 // Routes d'authentification
 router.use('/auth', authRoutes);
 
+// Routes admin
+router.use('/admin', adminRoutes);
+
+// Routes appels d'offres
+router.use('/calls-for-tenders', appelOffreRoutes);
+
 // TODO: Ajouter les autres routes
 // router.use('/freelances', freelanceRoutes);
 // router.use('/entreprises', entrepriseRoutes);
 // router.use('/contrats', contratRoutes);
-// router.use('/appels-offres', appelOffreRoutes);
 // router.use('/messages', messageRoutes);
 // router.use('/notifications', notificationRoutes);
 
