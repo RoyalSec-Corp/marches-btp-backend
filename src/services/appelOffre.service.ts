@@ -47,7 +47,6 @@ class AppelOffreService {
    * Créer un appel d'offre
    */
   async create(userId: number, data: CreateAppelOffreData) {
-    // Trouver l'entreprise liée à l'utilisateur (si applicable)
     const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
 
     const appelOffre = await prisma.appelOffre.create({
@@ -84,26 +83,20 @@ class AppelOffreService {
 
     const where: Prisma.AppelOffreWhereInput = {};
 
-    // Filtrer par publisher (mes AO uniquement)
     if (filters.publisher_only && filters.userId) {
       const entreprise = await prisma.entreprise.findUnique({ where: { userId: filters.userId } });
       if (entreprise) {
         where.entrepriseId = entreprise.id;
       } else {
-        // L'utilisateur n'a pas d'entreprise, retourner vide
         return { calls_for_tenders: [], pagination: { page, limit, total: 0, pages: 0 } };
       }
     }
 
-    // Filtres optionnels
     if (filters.localisation) {
       where.ville = { contains: filters.localisation, mode: 'insensitive' };
     }
     if (filters.type_construction) {
       where.typeConstruction = { contains: filters.type_construction, mode: 'insensitive' };
-    }
-    if (filters.budget_min || filters.budget_max) {
-      // Budget est un String, on filtre côté applicatif si nécessaire
     }
     if (filters.mots_cles && filters.mots_cles.length > 0) {
       where.OR = filters.mots_cles.map(mot => ({
@@ -128,7 +121,6 @@ class AppelOffreService {
       }),
     ]);
 
-    // Transformer pour le frontend
     const calls_for_tenders = appels.map(a => ({
       id: a.id,
       titre: a.titre,
@@ -200,10 +192,9 @@ class AppelOffreService {
   }
 
   /**
-   * Statistiques pour le dashboard
+   * Statistiques pour le dashboard (StatCards + graphiques)
    */
   async getStatistics(userId?: number) {
-    // Données mensuelles (6 derniers mois)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -263,17 +254,34 @@ class AppelOffreService {
       return { range: range.range, count };
     });
 
-    // Totaux
-    const totalAppels = await prisma.appelOffre.count();
-    const totalCandidatures = await prisma.appelOffreCandidature.count();
+    // Compteurs pour StatCards
     const appelsActifs = await prisma.appelOffre.count({ where: { statutCompte: 'PUBLIE' } });
+    const totalCandidatures = await prisma.appelOffreCandidature.count();
+    const totalAppels = await prisma.appelOffre.count();
+
+    // Projets via contrats
+    let activeProjects = 0;
+    let completedProjects = 0;
+    try {
+      activeProjects = await prisma.contrat.count({ where: { statut: 'EN_COURS' } });
+      completedProjects = await prisma.contrat.count({ where: { statut: 'TERMINE' } });
+    } catch {
+      // Table contrats peut ne pas encore avoir de données
+    }
 
     return {
+      // Champs attendus par StatCards
+      active_calls: appelsActifs,
+      total_applications: totalCandidatures,
+      active_projects: activeProjects,
+      completed_projects: completedProjects,
+      // Champs pour les graphiques
       monthly_data,
       budget_distribution,
+      // Données supplémentaires
       total_appels: totalAppels,
-      total_candidatures: totalCandidatures,
       appels_actifs: appelsActifs,
+      total_candidatures: totalCandidatures,
     };
   }
 
@@ -281,7 +289,6 @@ class AppelOffreService {
    * Postuler à un appel d'offre
    */
   async apply(appelOffreId: number, userId: number, data: ApplyData) {
-    // Vérifier que l'AO existe
     const appel = await prisma.appelOffre.findUnique({ where: { id: appelOffreId } });
     if (!appel) throw new Error('Appel d\'offre non trouvé');
 
