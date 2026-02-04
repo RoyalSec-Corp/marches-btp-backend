@@ -44,8 +44,26 @@ export interface ApplyData {
 class AppelOffreService {
 
   /**
+   * Trouver tous les AO appartenant à un userId
+   * Cherche par publisherId OU par entrepriseId (fallback pour anciens AO)
+   */
+  private async buildOwnerFilter(userId: number): Promise<Prisma.AppelOffreWhereInput> {
+    const conditions: Prisma.AppelOffreWhereInput[] = [
+      { publisherId: userId },
+    ];
+
+    // Fallback: chercher aussi par entrepriseId pour les anciens AO sans publisherId
+    const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
+    if (entreprise) {
+      conditions.push({ entrepriseId: entreprise.id, publisherId: null });
+    }
+
+    return { OR: conditions };
+  }
+
+  /**
    * Créer un appel d'offre
-   * publisherId = userId du créateur (toujours stocké, quel que soit le type de compte)
+   * publisherId = userId du créateur (toujours stocké)
    */
   async create(userId: number, data: CreateAppelOffreData) {
     const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
@@ -68,18 +86,27 @@ class AppelOffreService {
       },
       include: {
         entreprise: { select: { raisonSociale: true } },
-        publisher: { select: { nom: true, prenom: true, email: true } },
         _count: { select: { candidatures: true } },
       },
     });
+
+    // Auto-fix: mettre à jour les anciens AO du même user qui n'ont pas de publisherId
+    try {
+      if (entreprise) {
+        await prisma.appelOffre.updateMany({
+          where: { entrepriseId: entreprise.id, publisherId: null },
+          data: { publisherId: userId },
+        });
+      }
+    } catch (err) {
+      console.error('Auto-fix publisherId échoué:', err);
+    }
 
     return appelOffre;
   }
 
   /**
    * Lister les appels d'offre avec filtres et pagination
-   * publisher_only: filtre par publisherId (userId du créateur)
-   *   → Fonctionne pour TOUS les types de comptes (entreprise, particulier, appel_offre)
    */
   async findAll(filters: ListFilters) {
     const page = filters.page || 1;
@@ -88,10 +115,10 @@ class AppelOffreService {
 
     const where: Prisma.AppelOffreWhereInput = {};
 
-    // ✅ FIX: Utiliser publisherId au lieu de entrepriseId pour le filtre publisher_only
-    // Cela fonctionne pour TOUS les types de comptes
     if (filters.publisher_only && filters.userId) {
-      where.publisherId = filters.userId;
+      // Chercher par publisherId OU entrepriseId (fallback anciens AO)
+      const ownerFilter = await this.buildOwnerFilter(filters.userId);
+      Object.assign(where, ownerFilter);
     }
 
     if (filters.localisation) {
@@ -101,12 +128,30 @@ class AppelOffreService {
       where.typeConstruction = { contains: filters.type_construction, mode: 'insensitive' };
     }
     if (filters.mots_cles && filters.mots_cles.length > 0) {
-      where.OR = filters.mots_cles.map(mot => ({
+      // Si on a déjà un OR du ownerFilter, on doit combiner avec AND
+      const motsClesFilter = filters.mots_cles.map(mot => ({
         OR: [
           { titre: { contains: mot, mode: 'insensitive' as const } },
           { description: { contains: mot, mode: 'insensitive' as const } },
         ],
       }));
+      
+      if (where.OR) {
+        // Combiner ownerFilter OR avec mots_cles
+        const ownerOR = where.OR;
+        delete where.OR;
+        where.AND = [
+          { OR: ownerOR as Prisma.AppelOffreWhereInput[] },
+          ...motsClesFilter,
+        ];
+      } else {
+        where.OR = filters.mots_cles.map(mot => ({
+          OR: [
+            { titre: { contains: mot, mode: 'insensitive' as const } },
+            { description: { contains: mot, mode: 'insensitive' as const } },
+          ],
+        }));
+      }
     }
 
     const [total, appels] = await Promise.all([
@@ -118,7 +163,6 @@ class AppelOffreService {
         orderBy: { dateCreation: 'desc' },
         include: {
           entreprise: { select: { raisonSociale: true } },
-          publisher: { select: { nom: true, prenom: true, email: true } },
           _count: { select: { candidatures: true } },
         },
       }),
@@ -137,7 +181,7 @@ class AppelOffreService {
       statut: a.statutCompte === 'PUBLIE' ? 'published' : a.statutCompte === 'CLOTURE' ? 'closed' : a.statutCompte === 'BROUILLON' ? 'draft' : 'cancelled',
       date_limite: a.dateLimite,
       created_at: a.dateCreation,
-      company_name: a.entreprise?.raisonSociale || (a.publisher ? `${a.publisher.prenom || ''} ${a.publisher.nom || ''}`.trim() : null) || null,
+      company_name: a.entreprise?.raisonSociale || null,
       entreprise_id: a.entrepriseId,
       publisher_id: a.publisherId,
       candidatures_count: a._count.candidatures,
@@ -162,7 +206,6 @@ class AppelOffreService {
       where: { id },
       include: {
         entreprise: { select: { raisonSociale: true, ville: true } },
-        publisher: { select: { nom: true, prenom: true, email: true } },
         _count: { select: { candidatures: true } },
         candidatures: {
           include: {
@@ -189,7 +232,7 @@ class AppelOffreService {
       statut: appel.statutCompte,
       date_limite: appel.dateLimite,
       created_at: appel.dateCreation,
-      company_name: appel.entreprise?.raisonSociale || (appel.publisher ? `${appel.publisher.prenom || ''} ${appel.publisher.nom || ''}`.trim() : null) || null,
+      company_name: appel.entreprise?.raisonSociale || null,
       entreprise_id: appel.entrepriseId,
       publisher_id: appel.publisherId,
       candidatures_count: appel._count.candidatures,
@@ -198,14 +241,17 @@ class AppelOffreService {
   }
 
   /**
-   * Statistiques pour le dashboard (StatCards + graphiques)
+   * Statistiques pour le dashboard
    */
   async getStatistics(userId?: number) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    // Si userId fourni, filtrer par publisherId pour stats personnalisées
-    const userFilter: Prisma.AppelOffreWhereInput = userId ? { publisherId: userId } : {};
+    // Filtrer par owner (publisherId OU entrepriseId fallback)
+    let userFilter: Prisma.AppelOffreWhereInput = {};
+    if (userId) {
+      userFilter = await this.buildOwnerFilter(userId);
+    }
 
     const appels = await prisma.appelOffre.findMany({
       where: { dateCreation: { gte: sixMonthsAgo }, ...userFilter },
@@ -264,26 +310,22 @@ class AppelOffreService {
       return { range: range.range, count };
     });
 
-    // Compteurs pour StatCards — filtrer par publisher si userId fourni
-    const countFilter = userId ? { publisherId: userId } : {};
-    const appelsActifs = await prisma.appelOffre.count({ where: { statutCompte: 'PUBLIE', ...countFilter } });
-    const totalAppels = await prisma.appelOffre.count({ where: countFilter });
+    // Compteurs — utiliser les IDs trouvés
+    const userAppelIds = appels.map(a => a.id);
+    const appelsActifs = await prisma.appelOffre.count({ 
+      where: { statutCompte: 'PUBLIE', ...userFilter } 
+    });
+    const totalAppels = await prisma.appelOffre.count({ where: userFilter });
 
-    // Compter les candidatures reçues sur les AO de l'utilisateur
     let totalCandidatures = 0;
-    if (userId) {
-      const userAppelIds = await prisma.appelOffre.findMany({
-        where: { publisherId: userId },
-        select: { id: true },
-      });
+    if (userId && userAppelIds.length > 0) {
       totalCandidatures = await prisma.appelOffreCandidature.count({
-        where: { appelOffreId: { in: userAppelIds.map(a => a.id) } },
+        where: { appelOffreId: { in: userAppelIds } },
       });
-    } else {
+    } else if (!userId) {
       totalCandidatures = await prisma.appelOffreCandidature.count();
     }
 
-    // Projets via contrats
     let activeProjects = 0;
     let completedProjects = 0;
     try {
@@ -294,15 +336,12 @@ class AppelOffreService {
     }
 
     return {
-      // Champs attendus par StatCards
       active_calls: appelsActifs,
       total_applications: totalCandidatures,
       active_projects: activeProjects,
       completed_projects: completedProjects,
-      // Champs pour les graphiques
       monthly_data,
       budget_distribution,
-      // Données supplémentaires
       total_appels: totalAppels,
       appels_actifs: appelsActifs,
       total_candidatures: totalCandidatures,
@@ -343,11 +382,12 @@ class AppelOffreService {
     });
 
     // Notifier le publisher de l'AO
-    if (appel.publisherId) {
+    const publisherUserId = appel.publisherId;
+    if (publisherUserId) {
       try {
         await prisma.notification.create({
           data: {
-            userId: appel.publisherId,
+            userId: publisherUserId,
             type: 'CANDIDATURE',
             titre: 'Nouvelle candidature reçue',
             message: `Vous avez reçu une nouvelle candidature pour "${appel.titre}"`,
