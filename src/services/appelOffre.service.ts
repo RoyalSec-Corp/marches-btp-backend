@@ -45,6 +45,7 @@ class AppelOffreService {
 
   /**
    * Créer un appel d'offre
+   * publisherId = userId du créateur (toujours stocké, quel que soit le type de compte)
    */
   async create(userId: number, data: CreateAppelOffreData) {
     const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
@@ -61,11 +62,13 @@ class AppelOffreService {
         typePersonne: data.typePersonne || 'PROFESSIONNEL',
         dateLimite: data.dateLimite ? new Date(data.dateLimite) : undefined,
         statutCompte: 'PUBLIE',
+        publisherId: userId,
         entrepriseId: entreprise?.id || null,
         adminId: null,
       },
       include: {
         entreprise: { select: { raisonSociale: true } },
+        publisher: { select: { nom: true, prenom: true, email: true } },
         _count: { select: { candidatures: true } },
       },
     });
@@ -75,6 +78,8 @@ class AppelOffreService {
 
   /**
    * Lister les appels d'offre avec filtres et pagination
+   * publisher_only: filtre par publisherId (userId du créateur)
+   *   → Fonctionne pour TOUS les types de comptes (entreprise, particulier, appel_offre)
    */
   async findAll(filters: ListFilters) {
     const page = filters.page || 1;
@@ -83,13 +88,10 @@ class AppelOffreService {
 
     const where: Prisma.AppelOffreWhereInput = {};
 
+    // ✅ FIX: Utiliser publisherId au lieu de entrepriseId pour le filtre publisher_only
+    // Cela fonctionne pour TOUS les types de comptes
     if (filters.publisher_only && filters.userId) {
-      const entreprise = await prisma.entreprise.findUnique({ where: { userId: filters.userId } });
-      if (entreprise) {
-        where.entrepriseId = entreprise.id;
-      } else {
-        return { calls_for_tenders: [], pagination: { page, limit, total: 0, pages: 0 } };
-      }
+      where.publisherId = filters.userId;
     }
 
     if (filters.localisation) {
@@ -116,6 +118,7 @@ class AppelOffreService {
         orderBy: { dateCreation: 'desc' },
         include: {
           entreprise: { select: { raisonSociale: true } },
+          publisher: { select: { nom: true, prenom: true, email: true } },
           _count: { select: { candidatures: true } },
         },
       }),
@@ -134,8 +137,9 @@ class AppelOffreService {
       statut: a.statutCompte === 'PUBLIE' ? 'published' : a.statutCompte === 'CLOTURE' ? 'closed' : a.statutCompte === 'BROUILLON' ? 'draft' : 'cancelled',
       date_limite: a.dateLimite,
       created_at: a.dateCreation,
-      company_name: a.entreprise?.raisonSociale || null,
+      company_name: a.entreprise?.raisonSociale || (a.publisher ? `${a.publisher.prenom || ''} ${a.publisher.nom || ''}`.trim() : null) || null,
       entreprise_id: a.entrepriseId,
+      publisher_id: a.publisherId,
       candidatures_count: a._count.candidatures,
     }));
 
@@ -158,6 +162,7 @@ class AppelOffreService {
       where: { id },
       include: {
         entreprise: { select: { raisonSociale: true, ville: true } },
+        publisher: { select: { nom: true, prenom: true, email: true } },
         _count: { select: { candidatures: true } },
         candidatures: {
           include: {
@@ -184,8 +189,9 @@ class AppelOffreService {
       statut: appel.statutCompte,
       date_limite: appel.dateLimite,
       created_at: appel.dateCreation,
-      company_name: appel.entreprise?.raisonSociale || null,
+      company_name: appel.entreprise?.raisonSociale || (appel.publisher ? `${appel.publisher.prenom || ''} ${appel.publisher.nom || ''}`.trim() : null) || null,
       entreprise_id: appel.entrepriseId,
+      publisher_id: appel.publisherId,
       candidatures_count: appel._count.candidatures,
       candidatures: appel.candidatures,
     };
@@ -198,8 +204,11 @@ class AppelOffreService {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
+    // Si userId fourni, filtrer par publisherId pour stats personnalisées
+    const userFilter: Prisma.AppelOffreWhereInput = userId ? { publisherId: userId } : {};
+
     const appels = await prisma.appelOffre.findMany({
-      where: { dateCreation: { gte: sixMonthsAgo } },
+      where: { dateCreation: { gte: sixMonthsAgo }, ...userFilter },
       select: {
         id: true,
         dateCreation: true,
@@ -235,6 +244,7 @@ class AppelOffreService {
 
     // Répartition par budget
     const allAppels = await prisma.appelOffre.findMany({
+      where: userFilter,
       select: { budget: true },
     });
 
@@ -254,10 +264,24 @@ class AppelOffreService {
       return { range: range.range, count };
     });
 
-    // Compteurs pour StatCards
-    const appelsActifs = await prisma.appelOffre.count({ where: { statutCompte: 'PUBLIE' } });
-    const totalCandidatures = await prisma.appelOffreCandidature.count();
-    const totalAppels = await prisma.appelOffre.count();
+    // Compteurs pour StatCards — filtrer par publisher si userId fourni
+    const countFilter = userId ? { publisherId: userId } : {};
+    const appelsActifs = await prisma.appelOffre.count({ where: { statutCompte: 'PUBLIE', ...countFilter } });
+    const totalAppels = await prisma.appelOffre.count({ where: countFilter });
+
+    // Compter les candidatures reçues sur les AO de l'utilisateur
+    let totalCandidatures = 0;
+    if (userId) {
+      const userAppelIds = await prisma.appelOffre.findMany({
+        where: { publisherId: userId },
+        select: { id: true },
+      });
+      totalCandidatures = await prisma.appelOffreCandidature.count({
+        where: { appelOffreId: { in: userAppelIds.map(a => a.id) } },
+      });
+    } else {
+      totalCandidatures = await prisma.appelOffreCandidature.count();
+    }
 
     // Projets via contrats
     let activeProjects = 0;
@@ -317,6 +341,23 @@ class AppelOffreService {
         statut: 'EN_ATTENTE',
       },
     });
+
+    // Notifier le publisher de l'AO
+    if (appel.publisherId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: appel.publisherId,
+            type: 'CANDIDATURE',
+            titre: 'Nouvelle candidature reçue',
+            message: `Vous avez reçu une nouvelle candidature pour "${appel.titre}"`,
+            lien: `/dashboard-appel-offre/candidatures`,
+          },
+        });
+      } catch (err) {
+        console.error('Erreur notification candidature:', err);
+      }
+    }
 
     return candidature;
   }
