@@ -43,6 +43,9 @@ model User {
   receivedMessages  Message[]      @relation("ReceivedMessages")
   notifications     Notification[]
 
+  // === Relations Appels d'offres ===
+  publishedAppelOffres AppelOffre[] @relation("PublishedAppelOffres")
+
   @@map("users")
   @@index([email])
   @@index([userType])
