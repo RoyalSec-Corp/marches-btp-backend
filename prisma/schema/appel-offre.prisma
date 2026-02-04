@@ -16,7 +16,8 @@ model AppelOffre {
   // Type d'emetteur
   typePersonne      TypePersonne            @default(PROFESSIONNEL) @map("type_personne")
 
-  // Proprietaire
+  // Proprietaire — publisherId trace toujours le créateur (userId)
+  publisherId       Int?                    @map("publisher_id")
   entrepriseId      Int?                    @map("entreprise_id")
   adminId           Int?                    @map("admin_id")
 
@@ -34,12 +35,14 @@ model AppelOffre {
   dateCreation      DateTime                @default(now()) @map("date_creation")
 
   // Relations
+  publisher         User?                   @relation("PublishedAppelOffres", fields: [publisherId], references: [id], onDelete: SetNull)
   entreprise        Entreprise?             @relation(fields: [entrepriseId], references: [id], onDelete: SetNull)
   candidatures      AppelOffreCandidature[]
   contrats          Contrat[]
   messages          Message[]
 
   @@map("appels_offres")
+  @@index([publisherId])
   @@index([entrepriseId])
   @@index([statutCompte])
   @@index([ville])
