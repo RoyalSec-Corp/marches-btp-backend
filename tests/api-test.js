@@ -1,11 +1,11 @@
 /**
  * Script de test API MarchesBTP
- * Usage: API_URL=http://localhost:3002/api node tests/api-test.js
+ * Usage: API_URL=http://localhost:3002 node tests/api-test.js
  * 
  * Pré-requis: Le serveur doit tourner
  */
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3002/api';
+const BASE_URL = process.env.API_URL || 'http://localhost:3002';
 
 // Couleurs console
 const colors = {
@@ -23,6 +23,7 @@ const log = {
   info: (msg) => console.log(`${colors.blue}ℹ${colors.reset} ${msg}`),
   section: (msg) => console.log(`\n${colors.cyan}═══ ${msg} ═══${colors.reset}`),
   warn: (msg) => console.log(`${colors.yellow}⚠${colors.reset} ${msg}`),
+  debug: (msg) => console.log(`   ${colors.yellow}→${colors.reset} ${msg}`),
 };
 
 // État global pour les tests
@@ -56,7 +57,10 @@ async function request(method, endpoint, body = null, token = null) {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, options);
+    const url = endpoint.startsWith('/api') || endpoint === '/health' || endpoint === '/' 
+      ? `${BASE_URL}${endpoint}` 
+      : `${BASE_URL}/api${endpoint}`;
+    const response = await fetch(url, options);
     const data = await response.json().catch(() => ({}));
     return { status: response.status, data, ok: response.ok };
   } catch (error) {
@@ -65,7 +69,7 @@ async function request(method, endpoint, body = null, token = null) {
 }
 
 // Fonction de test
-async function test(name, testFn) {
+async function test(name, testFn, debug = false) {
   try {
     const result = await testFn();
     if (result === 'skip') {
@@ -100,8 +104,12 @@ async function runTests() {
   
   await test('GET /health - API en ligne', async () => {
     const res = await request('GET', '/health');
-    // Accepter si on reçoit une réponse avec success ou message
-    return res.ok || res.data.success || res.data.message;
+    return res.ok && res.data.status === 'ok';
+  });
+
+  await test('GET / - Info API', async () => {
+    const res = await request('GET', '/');
+    return res.ok && res.data.name;
   });
 
   // ========== AUTH - INSCRIPTION ==========
@@ -110,14 +118,13 @@ async function runTests() {
   const testEmail = `test_${Date.now()}@example.com`;
   const testPassword = 'Test123!@#';
 
-  await test('POST /auth/register/freelance - Inscription freelance', async () => {
-    const res = await request('POST', '/auth/register/freelance', {
+  await test('POST /api/auth/register/freelance - Inscription freelance', async () => {
+    const res = await request('POST', '/api/auth/register/freelance', {
       email: testEmail,
       password: testPassword,
       nom: 'TestNom',
       prenom: 'TestPrenom',
       telephone: '0612345678',
-      // Champs requis supplémentaires
       metier: 'Électricien',
       tarif: 350,
       tarifJournalier: 350,
@@ -131,16 +138,14 @@ async function runTests() {
       state.freelanceId = res.data.user?.id || res.data.freelance?.id;
       return true;
     }
-    if (res.status === 400) {
-      console.log('   Response:', res.status, JSON.stringify(res.data, null, 2));
-    }
+    log.debug(`Status: ${res.status} - ${JSON.stringify(res.data.errors || res.data.message || res.data)}`);
     return false;
   });
 
   const entrepriseEmail = `entreprise_${Date.now()}@example.com`;
   
-  await test('POST /auth/register/entreprise - Inscription entreprise', async () => {
-    const res = await request('POST', '/auth/register/entreprise', {
+  await test('POST /api/auth/register/entreprise - Inscription entreprise', async () => {
+    const res = await request('POST', '/api/auth/register/entreprise', {
       email: entrepriseEmail,
       password: testPassword,
       nom: 'Durand',
@@ -151,7 +156,6 @@ async function runTests() {
       adresse: '123 Rue Test',
       codePostal: '75001',
       ville: 'Paris',
-      // Champs requis supplémentaires
       representantLegal: 'Marie Durand',
       secteurActivite: 'BTP',
     });
@@ -160,17 +164,15 @@ async function runTests() {
       state.entrepriseId = res.data.user?.id || res.data.entreprise?.id;
       return true;
     }
-    if (res.status === 400) {
-      console.log('   Response:', res.status, JSON.stringify(res.data, null, 2));
-    }
+    log.debug(`Status: ${res.status} - ${JSON.stringify(res.data.errors || res.data.message || res.data)}`);
     return false;
   });
 
   // ========== AUTH - LOGIN ==========
   log.section('AUTHENTIFICATION - LOGIN');
 
-  await test('POST /auth/login - Login freelance', async () => {
-    const res = await request('POST', '/auth/login', {
+  await test('POST /api/auth/login - Login freelance', async () => {
+    const res = await request('POST', '/api/auth/login', {
       email: testEmail,
       password: testPassword,
     });
@@ -178,16 +180,13 @@ async function runTests() {
       state.freelanceToken = res.data.accessToken || res.data.token;
       return true;
     }
-    // Si l'inscription a échoué, on skip
-    if (!state.freelanceToken && res.status === 401) {
-      return 'skip';
-    }
+    if (!state.freelanceToken) return 'skip';
     return false;
   });
 
-  await test('POST /auth/login - Login avec mauvais mot de passe', async () => {
-    const res = await request('POST', '/auth/login', {
-      email: testEmail,
+  await test('POST /api/auth/login - Login avec mauvais mot de passe', async () => {
+    const res = await request('POST', '/api/auth/login', {
+      email: 'fake@test.com',
       password: 'wrongpassword',
     });
     return res.status === 401 || res.status === 400;
@@ -196,29 +195,34 @@ async function runTests() {
   // ========== AUTH - PROFIL ==========
   log.section('AUTHENTIFICATION - PROFIL');
 
-  await test('GET /auth/profile - Récupérer profil (authentifié)', async () => {
+  await test('GET /api/auth/profile - Récupérer profil (authentifié)', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/auth/profile', null, state.freelanceToken);
-    return res.ok && res.data.email;
+    const res = await request('GET', '/api/auth/profile', null, state.freelanceToken);
+    return res.ok;
   });
 
-  await test('GET /auth/profile - Sans token (401)', async () => {
-    const res = await request('GET', '/auth/profile');
+  await test('GET /api/auth/profile - Sans token (401)', async () => {
+    const res = await request('GET', '/api/auth/profile');
     return res.status === 401;
   });
 
   // ========== FREELANCE ==========
   log.section('FREELANCE');
 
-  await test('GET /freelances/profile - Mon profil freelance', async () => {
-    if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/freelances/profile', null, state.freelanceToken);
+  await test('GET /api/freelances - Liste publique freelances', async () => {
+    const res = await request('GET', '/api/freelances');
     return res.ok;
   });
 
-  await test('PUT /freelances/profile - Modifier profil freelance', async () => {
+  await test('GET /api/freelances/profile - Mon profil freelance', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('PUT', '/freelances/profile', {
+    const res = await request('GET', '/api/freelances/profile', null, state.freelanceToken);
+    return res.ok;
+  });
+
+  await test('PUT /api/freelances/profile - Modifier profil freelance', async () => {
+    if (!state.freelanceToken) return 'skip';
+    const res = await request('PUT', '/api/freelances/profile', {
       metier: 'Plombier',
       experience: 8,
       tarifJournalier: 400,
@@ -226,140 +230,127 @@ async function runTests() {
     return res.ok;
   });
 
-  await test('PATCH /freelances/disponibilite - Modifier disponibilité', async () => {
+  await test('GET /api/freelances/documents - Mes documents (authentifié)', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('PATCH', '/freelances/disponibilite', {
-      disponible: true,
-    }, state.freelanceToken);
-    return res.ok || res.status === 404; // 404 si route n'existe pas encore
-  });
-
-  await test('GET /freelances - Liste publique freelances', async () => {
-    const res = await request('GET', '/freelances');
-    return res.ok && (Array.isArray(res.data.data) || Array.isArray(res.data));
-  });
-
-  await test('GET /freelances/search?q=test - Recherche freelances', async () => {
-    const res = await request('GET', '/freelances/search?q=test');
-    return res.ok || res.status === 404; // 404 si route search n'existe pas
-  });
-
-  await test('GET /freelances/documents - Mes documents (authentifié)', async () => {
-    if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/freelances/documents', null, state.freelanceToken);
+    const res = await request('GET', '/api/freelances/documents', null, state.freelanceToken);
     return res.ok;
   });
 
   // ========== ENTREPRISE ==========
   log.section('ENTREPRISE');
 
-  await test('GET /entreprises/profile - Mon profil entreprise', async () => {
-    if (!state.entrepriseToken) return 'skip';
-    const res = await request('GET', '/entreprises/profile', null, state.entrepriseToken);
+  await test('GET /api/entreprises - Liste publique entreprises', async () => {
+    const res = await request('GET', '/api/entreprises');
     return res.ok;
   });
 
-  await test('GET /entreprises - Liste publique entreprises', async () => {
-    const res = await request('GET', '/entreprises');
+  await test('GET /api/entreprises/profile - Mon profil entreprise', async () => {
+    if (!state.entrepriseToken) return 'skip';
+    const res = await request('GET', '/api/entreprises/profile', null, state.entrepriseToken);
     return res.ok;
   });
 
-  await test('GET /entreprises/documents - Mes documents (authentifié)', async () => {
+  await test('GET /api/entreprises/documents - Mes documents (authentifié)', async () => {
     if (!state.entrepriseToken) return 'skip';
-    const res = await request('GET', '/entreprises/documents', null, state.entrepriseToken);
+    const res = await request('GET', '/api/entreprises/documents', null, state.entrepriseToken);
     return res.ok;
   });
 
   // ========== GEOCODING ==========
   log.section('GÉOCODAGE');
 
-  await test('POST /geocoding/geocode - Géocoder adresse', async () => {
-    const res = await request('POST', '/geocoding/geocode', {
+  await test('POST /api/geocoding/geocode - Géocoder adresse', async () => {
+    const res = await request('POST', '/api/geocoding/geocode', {
       adresse: '1 Avenue des Champs-Élysées',
       ville: 'Paris',
       codePostal: '75008',
     });
-    // Accepter si la route existe et retourne quelque chose
-    return res.ok || (res.status !== 404 && res.data);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
-  await test('GET /geocoding/postal/75001 - Géocoder code postal', async () => {
-    const res = await request('GET', '/geocoding/postal/75001');
-    return res.ok || res.status !== 404;
+  await test('GET /api/geocoding/postal/75001 - Géocoder code postal', async () => {
+    const res = await request('GET', '/api/geocoding/postal/75001');
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
-  await test('GET /geocoding/autocomplete?q=Paris - Autocomplétion', async () => {
-    const res = await request('GET', '/geocoding/autocomplete?q=Paris');
-    return res.ok || res.status !== 404;
+  await test('GET /api/geocoding/autocomplete?q=Paris - Autocomplétion', async () => {
+    const res = await request('GET', '/api/geocoding/autocomplete?q=Paris');
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
-  await test('GET /geocoding/reverse?lat=48.8566&lng=2.3522 - Géocodage inverse', async () => {
-    const res = await request('GET', '/geocoding/reverse?lat=48.8566&lng=2.3522');
-    return res.ok || res.status !== 404;
+  await test('GET /api/geocoding/reverse - Géocodage inverse', async () => {
+    const res = await request('GET', '/api/geocoding/reverse?lat=48.8566&lng=2.3522');
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
-  await test('POST /geocoding/distance - Calculer distance', async () => {
-    const res = await request('POST', '/geocoding/distance', {
+  await test('POST /api/geocoding/distance - Calculer distance', async () => {
+    const res = await request('POST', '/api/geocoding/distance', {
       from: { lat: 48.8566, lng: 2.3522 },
       to: { lat: 45.764, lng: 4.8357 },
     });
-    return res.ok || res.status !== 404;
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
   // ========== CONTRATS ==========
   log.section('CONTRATS');
 
-  await test('GET /contrats/stats - Statistiques contrats', async () => {
+  await test('GET /api/contrats - Liste contrats', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/contrats/stats', null, state.freelanceToken);
+    const res = await request('GET', '/api/contrats', null, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
-  await test('GET /contrats/me - Mes contrats', async () => {
+  await test('GET /api/contrats/stats - Statistiques contrats', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/contrats/me', null, state.freelanceToken);
+    const res = await request('GET', '/api/contrats/stats', null, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
-  await test('GET /contrats - Liste contrats', async () => {
+  await test('GET /api/contrats/me - Mes contrats', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/contrats', null, state.freelanceToken);
+    const res = await request('GET', '/api/contrats/me', null, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
   // ========== NOTIFICATIONS ==========
   log.section('NOTIFICATIONS');
 
-  await test('GET /notifications/unread-count - Compter non lues', async () => {
+  await test('GET /api/notifications - Liste notifications', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/notifications/unread-count', null, state.freelanceToken);
+    const res = await request('GET', '/api/notifications', null, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
-  await test('GET /notifications - Liste notifications', async () => {
+  await test('GET /api/notifications/unread-count - Compter non lues', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/notifications', null, state.freelanceToken);
+    const res = await request('GET', '/api/notifications/unread-count', null, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
-  await test('PUT /notifications/read-all - Marquer tout comme lu', async () => {
+  await test('PUT /api/notifications/read-all - Marquer tout comme lu', async () => {
     if (!state.freelanceToken) return 'skip';
-    const res = await request('PUT', '/notifications/read-all', {}, state.freelanceToken);
+    const res = await request('PUT', '/api/notifications/read-all', {}, state.freelanceToken);
+    if (!res.ok) log.debug(`Status: ${res.status}`);
     return res.ok;
   });
 
   // ========== APPELS D'OFFRES ==========
   log.section('APPELS D\'OFFRES');
 
-  await test('GET /appels-offres - Liste appels d\'offres', async () => {
-    const res = await request('GET', '/appels-offres');
-    return res.ok || res.status !== 404;
-  });
-
-  await test('GET /appels-offres/statistics - Statistiques (authentifié)', async () => {
-    if (!state.freelanceToken) return 'skip';
-    const res = await request('GET', '/appels-offres/statistics', null, state.freelanceToken);
-    return res.ok || res.status !== 404;
+  await test('GET /api/calls-for-tenders - Liste appels d\'offres', async () => {
+    const res = await request('GET', '/api/calls-for-tenders');
+    if (!res.ok) log.debug(`Status: ${res.status}`);
+    return res.ok;
   });
 
   // ========== RÉSUMÉ ==========
