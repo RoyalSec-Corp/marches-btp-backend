@@ -3,21 +3,21 @@ import { geocodingController } from '../controllers/geocoding.controller.js';
 
 const router = Router();
 
-// Routes publiques de géocodage (API gouvernementale française)
+// Routes publiques de géocodage (API gouvernementale gratuite)
 
-// Géocoder une adresse complète
+// POST /api/geocoding/geocode - Géocoder une adresse complète
 router.post('/geocode', geocodingController.geocode);
 
-// Géocodage inverse (coordonnées → adresse)
-router.post('/reverse', geocodingController.reverseGeocode);
+// GET /api/geocoding/postal/:codePostal - Géocoder par code postal
+router.get('/postal/:codePostal', geocodingController.geocodeByPostalCode);
 
-// Autocomplétion d'adresse (pour les formulaires)
+// GET /api/geocoding/reverse?lat=...&lng=... - Géocodage inverse
+router.get('/reverse', geocodingController.reverseGeocode);
+
+// GET /api/geocoding/autocomplete?q=... - Autocomplétion d'adresse
 router.get('/autocomplete', geocodingController.autocomplete);
 
-// Calculer la distance entre deux points
+// POST /api/geocoding/distance - Calculer distance entre deux points
 router.post('/distance', geocodingController.calculateDistance);
-
-// Recherche par code postal
-router.get('/postal/:code', geocodingController.searchByPostalCode);
 
 export default router;
