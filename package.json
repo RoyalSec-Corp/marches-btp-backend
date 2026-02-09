@@ -20,6 +20,7 @@
     "prisma:reset": "prisma migrate reset --force",
     "db:setup": "npm run prisma:generate && npm run prisma:migrate && npm run prisma:seed",
     "test": "jest",
+    "test:api": "node tests/api-test.js",
     "prepare": "husky"
   },
   "prisma": {
