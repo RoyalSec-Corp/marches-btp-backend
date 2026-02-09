@@ -13,6 +13,9 @@ import authRoutes from './routes/auth.routes.js';
 import freelanceRoutes from './routes/freelance.routes.js';
 import entrepriseRoutes from './routes/entreprise.routes.js';
 import appelOffreRoutes from './routes/appelOffre.routes.js';
+import contratRoutes from './routes/contrat.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import geocodingRoutes from './routes/geocoding.routes.js';
 
 // Creer l'application Express
 const app: Application = express();
@@ -53,15 +56,21 @@ if (env.NODE_ENV === 'development') {
 }
 
 // ===== ROUTES API =====
+// Authentification
 app.use('/api/auth', authRoutes);
+
+// Utilisateurs
 app.use('/api/freelances', freelanceRoutes);
 app.use('/api/entreprises', entrepriseRoutes);
-app.use('/api/calls-for-tenders', appelOffreRoutes);
 
-// TODO: Sprint 5+ - Ajouter les autres routes
-// app.use('/api/users', userRoutes);
-// app.use('/api/contrats', contratRoutes);
-// app.use('/api/notifications', notificationRoutes);
+// Métier
+app.use('/api/calls-for-tenders', appelOffreRoutes);
+app.use('/api/appels-offres', appelOffreRoutes); // Alias français
+app.use('/api/contrats', contratRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+// Utilitaires
+app.use('/api/geocoding', geocodingRoutes);
 
 // ===== ROUTE HEALTH CHECK =====
 app.get('/health', (_req, res) => {
@@ -83,6 +92,10 @@ app.get('/', (_req, res) => {
       freelances: '/api/freelances',
       entreprises: '/api/entreprises',
       'calls-for-tenders': '/api/calls-for-tenders',
+      'appels-offres': '/api/appels-offres',
+      contrats: '/api/contrats',
+      notifications: '/api/notifications',
+      geocoding: '/api/geocoding',
       health: '/health',
     },
   });
