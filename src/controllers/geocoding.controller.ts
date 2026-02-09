@@ -38,22 +38,61 @@ class GeocodingController {
   }
 
   /**
-   * Géocodage inverse (coordonnées → adresse)
-   * POST /api/geocoding/reverse
+   * Géocodage par code postal
+   * GET /api/geocoding/postal/:codePostal
    */
-  async reverseGeocode(req: Request, res: Response): Promise<void> {
+  async geocodeByPostalCode(req: Request, res: Response): Promise<void> {
     try {
-      const { latitude, longitude } = req.body;
+      const { codePostal } = req.params;
+      const { ville } = req.query;
 
-      if (latitude === undefined || longitude === undefined) {
-        res.status(400).json({ error: 'Latitude et longitude sont requis' });
+      if (!codePostal) {
+        res.status(400).json({ error: 'Code postal requis' });
         return;
       }
 
-      const result = await geocodingService.reverseGeocode(
-        parseFloat(latitude),
-        parseFloat(longitude)
+      const result = await geocodingService.geocodeByPostalCode(
+        codePostal,
+        ville as string | undefined
       );
+
+      if (!result) {
+        res.status(404).json({ error: 'Code postal non trouvé' });
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Erreur géocodage par code postal:', error);
+      res.status(500).json({ 
+        error: 'Erreur lors du géocodage',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      });
+    }
+  }
+
+  /**
+   * Géocodage inverse (coordonnées → adresse)
+   * GET /api/geocoding/reverse
+   */
+  async reverseGeocode(req: Request, res: Response): Promise<void> {
+    try {
+      const { lat, lng } = req.query;
+
+      if (!lat || !lng) {
+        res.status(400).json({ error: 'Latitude et longitude requises' });
+        return;
+      }
+
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lng as string);
+
+      if (isNaN(latitude) || isNaN(longitude)) {
+        res.status(400).json({ error: 'Coordonnées invalides' });
+        return;
+      }
+
+      const result = await geocodingService.reverseGeocode(latitude, longitude);
 
       if (!result) {
         res.status(404).json({ error: 'Aucune adresse trouvée pour ces coordonnées' });
@@ -72,21 +111,24 @@ class GeocodingController {
 
   /**
    * Autocomplétion d'adresse
-   * GET /api/geocoding/autocomplete?q=query
+   * GET /api/geocoding/autocomplete
    */
   async autocomplete(req: Request, res: Response): Promise<void> {
     try {
       const { q, limit } = req.query;
 
       if (!q || typeof q !== 'string') {
-        res.status(400).json({ error: 'Paramètre q (query) requis' });
+        res.status(400).json({ error: 'Paramètre de recherche requis (q)' });
         return;
       }
 
-      const results = await geocodingService.autocomplete(
-        q,
-        limit ? parseInt(limit as string, 10) : 5
-      );
+      if (q.length < 3) {
+        res.status(400).json({ error: 'Minimum 3 caractères requis' });
+        return;
+      }
+
+      const limitNum = limit ? parseInt(limit as string, 10) : 5;
+      const results = await geocodingService.autocomplete(q, limitNum);
 
       res.status(200).json({ suggestions: results });
     } catch (error) {
@@ -104,62 +146,36 @@ class GeocodingController {
    */
   async calculateDistance(req: Request, res: Response): Promise<void> {
     try {
-      const { lat1, lon1, lat2, lon2 } = req.body;
+      const { from, to } = req.body;
 
-      if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) {
-        res.status(400).json({ error: 'Les 4 coordonnées sont requises (lat1, lon1, lat2, lon2)' });
+      if (!from || !to) {
+        res.status(400).json({ error: 'Points de départ (from) et d\'arrivée (to) requis' });
+        return;
+      }
+
+      if (typeof from.lat !== 'number' || typeof from.lng !== 'number' ||
+          typeof to.lat !== 'number' || typeof to.lng !== 'number') {
+        res.status(400).json({ error: 'Coordonnées invalides' });
         return;
       }
 
       const distance = geocodingService.calculateDistance(
-        parseFloat(lat1),
-        parseFloat(lon1),
-        parseFloat(lat2),
-        parseFloat(lon2)
+        from.lat,
+        from.lng,
+        to.lat,
+        to.lng
       );
 
       res.status(200).json({
         distance: Math.round(distance * 100) / 100, // Arrondi à 2 décimales
         unit: 'km',
+        from,
+        to,
       });
     } catch (error) {
       console.error('Erreur calcul distance:', error);
       res.status(500).json({ 
         error: 'Erreur lors du calcul de distance',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
-      });
-    }
-  }
-
-  /**
-   * Recherche par code postal
-   * GET /api/geocoding/postal/:code
-   */
-  async searchByPostalCode(req: Request, res: Response): Promise<void> {
-    try {
-      const { code } = req.params;
-      const { ville } = req.query;
-
-      if (!code) {
-        res.status(400).json({ error: 'Code postal requis' });
-        return;
-      }
-
-      const result = await geocodingService.geocodeByPostalCode(
-        code,
-        ville as string | undefined
-      );
-
-      if (!result) {
-        res.status(404).json({ error: 'Code postal non trouvé' });
-        return;
-      }
-
-      res.status(200).json(result);
-    } catch (error) {
-      console.error('Erreur recherche code postal:', error);
-      res.status(500).json({ 
-        error: 'Erreur lors de la recherche',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
     }
