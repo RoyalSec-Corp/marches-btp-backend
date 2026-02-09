@@ -1,53 +1,42 @@
 import { Router } from 'express';
+import { contratController } from '../controllers/contrat.controller.js';
+import { authenticate, requireFreelance, requireEntreprise } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-// GET /api/contrats - Liste des contrats
-router.get('/', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'GET /api/contrats'
-  });
-});
+// === Routes protégées ===
+
+// GET /api/contrats/stats - Statistiques (avant :id pour éviter conflit)
+router.get('/stats', authenticate, contratController.getStats);
+
+// GET /api/contrats/me - Mes contrats
+router.get('/me', authenticate, contratController.listMyContrats);
+
+// GET /api/contrats - Liste tous les contrats (admin ou filtres)
+router.get('/', authenticate, contratController.list);
 
 // GET /api/contrats/:id - Détails d'un contrat
-router.get('/:id', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'GET /api/contrats/:id'
-  });
-});
+router.get('/:id', authenticate, contratController.getById);
 
 // POST /api/contrats - Créer un contrat
-router.post('/', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'POST /api/contrats'
-  });
-});
+router.post('/', authenticate, contratController.create);
 
 // PUT /api/contrats/:id - Mettre à jour un contrat
-router.put('/:id', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'PUT /api/contrats/:id'
-  });
-});
+router.put('/:id', authenticate, contratController.update);
+
+// POST /api/contrats/:id/send - Envoyer pour signature
+router.post('/:id/send', authenticate, contratController.sendForSignature);
 
 // POST /api/contrats/:id/sign - Signer un contrat
-router.post('/:id/sign', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'POST /api/contrats/:id/sign'
-  });
-});
+router.post('/:id/sign', authenticate, contratController.sign);
+
+// POST /api/contrats/:id/start - Démarrer un contrat
+router.post('/:id/start', authenticate, contratController.start);
+
+// POST /api/contrats/:id/complete - Terminer un contrat
+router.post('/:id/complete', authenticate, contratController.complete);
 
 // DELETE /api/contrats/:id - Annuler un contrat
-router.delete('/:id', (_req, res) => {
-  res.status(501).json({ 
-    message: 'Route à implémenter - Sprint 5',
-    endpoint: 'DELETE /api/contrats/:id'
-  });
-});
+router.delete('/:id', authenticate, contratController.cancel);
 
 export default router;
