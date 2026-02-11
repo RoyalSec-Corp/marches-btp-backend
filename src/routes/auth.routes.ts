@@ -54,4 +54,28 @@ router.get('/profile', authenticate, authController.getProfile);
  */
 router.get('/verify', authenticate, authController.verifyToken);
 
+/**
+ * @route   PUT /api/auth/change-password
+ * @desc    Modifier le mot de passe (utilisateur connecté)
+ * @access  Private
+ * @body    { currentPassword: string, newPassword: string }
+ */
+router.put('/change-password', authenticate, authController.changePassword);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Demander une réinitialisation de mot de passe
+ * @access  Public
+ * @body    { email: string }
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Réinitialiser le mot de passe avec un token
+ * @access  Public
+ * @body    { token: string, newPassword: string }
+ */
+router.post('/reset-password', authController.resetPassword);
+
 export default router;
