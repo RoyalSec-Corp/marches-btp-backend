@@ -129,7 +129,7 @@ export const authController = {
   // GET /api/auth/profile
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = (req as any).user?.userId || (req as any).user?.id;
 
       if (!userId) {
         return res.status(401).json({
@@ -160,7 +160,7 @@ export const authController = {
   // GET /api/auth/verify
   verifyToken: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId;
+      const userId = (req as any).user?.userId || (req as any).user?.id;
 
       if (!userId) {
         return res.status(401).json({
@@ -182,6 +182,136 @@ export const authController = {
         message: 'Token invalide.',
         error: 'INVALID_TOKEN',
       });
+    }
+  },
+
+  // PUT /api/auth/change-password
+  changePassword: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as any).user?.userId || (req as any).user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Non authentifie.',
+          error: 'UNAUTHORIZED',
+        });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mot de passe actuel et nouveau mot de passe requis.',
+          error: 'MISSING_FIELDS',
+        });
+      }
+
+      // Validation du nouveau mot de passe
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+          error: 'WEAK_PASSWORD',
+        });
+      }
+
+      await authService.changePassword(userId, { currentPassword, newPassword });
+
+      res.json({
+        success: true,
+        message: 'Mot de passe modifié avec succès.',
+      });
+    } catch (error: any) {
+      if (error.message === 'INVALID_CURRENT_PASSWORD') {
+        return res.status(400).json({
+          success: false,
+          message: 'Mot de passe actuel incorrect.',
+          error: 'INVALID_CURRENT_PASSWORD',
+        });
+      }
+      if (error.message === 'SAME_PASSWORD') {
+        return res.status(400).json({
+          success: false,
+          message: 'Le nouveau mot de passe doit être différent de l\'ancien.',
+          error: 'SAME_PASSWORD',
+        });
+      }
+      if (error.message === 'USER_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur non trouvé.',
+          error: 'USER_NOT_FOUND',
+        });
+      }
+      next(error);
+    }
+  },
+
+  // POST /api/auth/forgot-password
+  forgotPassword: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email requis.',
+          error: 'MISSING_EMAIL',
+        });
+      }
+
+      const result = await authService.forgotPassword(email);
+
+      res.json({
+        success: true,
+        message: result.message,
+        // En dev, retourner le token pour tester
+        ...(result.resetToken && { resetToken: result.resetToken, resetUrl: result.resetUrl }),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // POST /api/auth/reset-password
+  resetPassword: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token et nouveau mot de passe requis.',
+          error: 'MISSING_FIELDS',
+        });
+      }
+
+      // Validation du nouveau mot de passe
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le mot de passe doit contenir au moins 8 caractères.',
+          error: 'WEAK_PASSWORD',
+        });
+      }
+
+      const result = await authService.resetPassword({ token, newPassword });
+
+      res.json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error: any) {
+      if (error.message === 'INVALID_OR_EXPIRED_TOKEN') {
+        return res.status(400).json({
+          success: false,
+          message: 'Lien de réinitialisation invalide ou expiré.',
+          error: 'INVALID_OR_EXPIRED_TOKEN',
+        });
+      }
+      next(error);
     }
   },
 };
