@@ -489,14 +489,14 @@ export const authService = {
     const resetToken = authService.generateResetToken();
     const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
 
-    // Stocker le token hashé en base
+    // Stocker le token hashé en base (utilise les champs du schéma Prisma)
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: resetTokenExpiry,
+        resetToken: hashedToken,
+        resetTokenExpires: resetTokenExpiry,
       },
     });
 
@@ -522,11 +522,11 @@ export const authService = {
     // Hasher le token reçu pour comparer avec celui en base
     const hashedToken = crypto.createHash('sha256').update(data.token).digest('hex');
 
-    // Trouver l'utilisateur avec ce token non expiré
+    // Trouver l'utilisateur avec ce token non expiré (utilise les champs du schéma Prisma)
     const user = await prisma.user.findFirst({
       where: {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: { gt: new Date() },
+        resetToken: hashedToken,
+        resetTokenExpires: { gt: new Date() },
       },
     });
 
@@ -542,8 +542,8 @@ export const authService = {
       where: { id: user.id },
       data: {
         password: hashedPassword,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
+        resetToken: null,
+        resetTokenExpires: null,
         updatedAt: new Date(),
       },
     });
