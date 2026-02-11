@@ -5,7 +5,7 @@ interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     email: string;
-    typeUtilisateur: string;
+    userType: string;
   };
 }
 
@@ -36,6 +36,7 @@ class UploadController {
       await uploadService.updateFreelanceDocuments(userId, documents);
 
       res.status(200).json({
+        success: true,
         message: 'Documents uploadés avec succès',
         documents: Object.entries(documents).map(([type, doc]) => ({
           type,
@@ -47,6 +48,7 @@ class UploadController {
     } catch (error) {
       console.error('Erreur upload documents freelance:', error);
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de l\'upload des documents',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
@@ -76,6 +78,7 @@ class UploadController {
       await uploadService.updateEntrepriseDocuments(userId, documents);
 
       res.status(200).json({
+        success: true,
         message: 'Documents uploadés avec succès',
         documents: Object.entries(documents).map(([type, doc]) => ({
           type,
@@ -87,6 +90,7 @@ class UploadController {
     } catch (error) {
       console.error('Erreur upload documents entreprise:', error);
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de l\'upload des documents',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
@@ -114,11 +118,13 @@ class UploadController {
       await uploadService.deleteFreelanceDocument(userId, type);
 
       res.status(200).json({
+        success: true,
         message: `Document ${type} supprimé avec succès`,
       });
     } catch (error) {
       console.error('Erreur suppression document freelance:', error);
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de la suppression du document',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
@@ -146,11 +152,13 @@ class UploadController {
       await uploadService.deleteEntrepriseDocument(userId, type);
 
       res.status(200).json({
+        success: true,
         message: `Document ${type} supprimé avec succès`,
       });
     } catch (error) {
       console.error('Erreur suppression document entreprise:', error);
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de la suppression du document',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
@@ -165,16 +173,34 @@ class UploadController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        res.status(401).json({ error: 'Non authentifié' });
+        res.status(401).json({ success: false, error: 'Non authentifié' });
         return;
       }
 
       const documents = await uploadService.getFreelanceDocuments(userId);
 
-      res.status(200).json({ documents });
+      res.status(200).json({ 
+        success: true,
+        documents 
+      });
     } catch (error) {
       console.error('Erreur récupération documents freelance:', error);
+      // Si freelance non trouvé, retourner documents vides au lieu d'erreur
+      if (error instanceof Error && error.message.includes('non trouvé')) {
+        res.status(200).json({ 
+          success: true,
+          documents: {
+            photo: null,
+            kbis: null,
+            assurance: null,
+            cv: null,
+            certifications: null,
+          }
+        });
+        return;
+      }
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de la récupération des documents',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
@@ -189,16 +215,32 @@ class UploadController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        res.status(401).json({ error: 'Non authentifié' });
+        res.status(401).json({ success: false, error: 'Non authentifié' });
         return;
       }
 
       const documents = await uploadService.getEntrepriseDocuments(userId);
 
-      res.status(200).json({ documents });
+      res.status(200).json({ 
+        success: true,
+        documents 
+      });
     } catch (error) {
       console.error('Erreur récupération documents entreprise:', error);
+      // Si entreprise non trouvée, retourner documents vides au lieu d'erreur
+      if (error instanceof Error && error.message.includes('non trouvé')) {
+        res.status(200).json({ 
+          success: true,
+          documents: {
+            logo: null,
+            kbis: null,
+            assurance: null,
+          }
+        });
+        return;
+      }
       res.status(500).json({ 
+        success: false,
         error: 'Erreur lors de la récupération des documents',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
