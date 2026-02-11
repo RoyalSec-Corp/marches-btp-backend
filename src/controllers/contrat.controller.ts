@@ -6,7 +6,7 @@ interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     email: string;
-    typeUtilisateur: string;
+    userType: string;
   };
 }
 
@@ -108,7 +108,7 @@ class ContratController {
   async listMyContrats(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
-      const userType = req.user?.typeUtilisateur as 'FREELANCE' | 'ENTREPRISE';
+      const userType = req.user?.userType as 'FREELANCE' | 'ENTREPRISE';
 
       if (!userId || !userType) {
         res.status(401).json({ error: 'Non authentifié' });
@@ -299,7 +299,7 @@ class ContratController {
   async getStats(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
-      const userType = req.user?.typeUtilisateur as 'FREELANCE' | 'ENTREPRISE' | undefined;
+      const userType = req.user?.userType as 'FREELANCE' | 'ENTREPRISE' | undefined;
 
       const stats = await contratService.getStats(
         userId,
