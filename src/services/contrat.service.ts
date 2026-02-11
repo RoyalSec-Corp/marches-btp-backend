@@ -168,17 +168,24 @@ class ContratService {
 
   /**
    * Récupérer les contrats d'un utilisateur (freelance ou entreprise)
+   * Retourne liste vide si le profil n'existe pas encore
    */
   async listByUser(userId: number, userType: 'FREELANCE' | 'ENTREPRISE', page: number = 1, limit: number = 10): Promise<any> {
     let where: Prisma.ContratWhereInput = {};
 
     if (userType === 'FREELANCE') {
       const freelance = await prisma.freelance.findUnique({ where: { userId } });
-      if (!freelance) throw new Error('Profil freelance non trouvé');
+      if (!freelance) {
+        // Profil pas encore créé, retourner liste vide
+        return { data: [], total: 0, page, totalPages: 0 };
+      }
       where.freelanceId = freelance.id;
     } else {
       const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
-      if (!entreprise) throw new Error('Profil entreprise non trouvé');
+      if (!entreprise) {
+        // Profil pas encore créé, retourner liste vide
+        return { data: [], total: 0, page, totalPages: 0 };
+      }
       where.entrepriseId = entreprise.id;
     }
 
