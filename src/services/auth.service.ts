@@ -72,13 +72,18 @@ export const authService = {
 
   // Hasher le mot de passe
   hashPassword: async (password: string): Promise<string> => {
-    const rounds = env.BCRYPT_ROUNDS || 12;
-    return bcrypt.hash(password, rounds);
+    const rounds = Number(env.BCRYPT_ROUNDS) || 12;
+    const salt = await bcrypt.genSalt(rounds);
+    const hash = await bcrypt.hash(password, salt);
+    console.log(`[DEBUG] hashPassword: rounds=${rounds}, password length=${password.length}, hash=${hash.substring(0, 20)}...`);
+    return hash;
   },
 
   // Verifier le mot de passe
   verifyPassword: async (password: string, hash: string): Promise<boolean> => {
-    return bcrypt.compare(password, hash);
+    const result = await bcrypt.compare(password, hash);
+    console.log(`[DEBUG] verifyPassword: password length=${password.length}, hash=${hash.substring(0, 20)}..., result=${result}`);
+    return result;
   },
 
   // Generer les tokens JWT
@@ -271,6 +276,8 @@ export const authService = {
 
   // Connexion
   login: async (data: LoginDTO, userAgent?: string) => {
+    console.log(`[DEBUG] login attempt for: ${data.email}`);
+    
     // Trouver l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: data.email },
@@ -281,8 +288,11 @@ export const authService = {
     });
 
     if (!user) {
+      console.log(`[DEBUG] user not found: ${data.email}`);
       throw new Error('INVALID_CREDENTIALS');
     }
+
+    console.log(`[DEBUG] user found, stored hash: ${user.password.substring(0, 20)}...`);
 
     // Verifier si le compte est actif
     if (!user.isActive) {
@@ -293,8 +303,11 @@ export const authService = {
     const isPasswordValid = await authService.verifyPassword(data.password, user.password);
 
     if (!isPasswordValid) {
+      console.log(`[DEBUG] password invalid for: ${data.email}`);
       throw new Error('INVALID_CREDENTIALS');
     }
+
+    console.log(`[DEBUG] login successful for: ${data.email}`);
 
     // Generer les tokens
     const tokens = authService.generateTokens({
@@ -424,6 +437,8 @@ export const authService = {
    * Fonctionne pour tous les types de comptes
    */
   changePassword: async (userId: number, data: ChangePasswordDTO) => {
+    console.log(`[DEBUG] changePassword for userId: ${userId}`);
+    
     // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -433,6 +448,8 @@ export const authService = {
       throw new Error('USER_NOT_FOUND');
     }
 
+    console.log(`[DEBUG] current hash in DB: ${user.password.substring(0, 20)}...`);
+
     // Vérifier l'ancien mot de passe
     const isCurrentPasswordValid = await authService.verifyPassword(
       data.currentPassword,
@@ -440,6 +457,7 @@ export const authService = {
     );
 
     if (!isCurrentPasswordValid) {
+      console.log(`[DEBUG] current password invalid`);
       throw new Error('INVALID_CURRENT_PASSWORD');
     }
 
@@ -449,19 +467,27 @@ export const authService = {
     }
 
     // Hasher le nouveau mot de passe
+    console.log(`[DEBUG] hashing new password...`);
     const hashedPassword = await authService.hashPassword(data.newPassword);
+    console.log(`[DEBUG] new hash: ${hashedPassword.substring(0, 20)}...`);
 
     // Mettre à jour le mot de passe
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: { 
         password: hashedPassword,
-        updatedAt: new Date(),
       },
     });
 
-    // Invalider toutes les sessions sauf la courante (optionnel, pour sécurité)
-    // On ne le fait pas ici pour ne pas déconnecter l'utilisateur
+    console.log(`[DEBUG] password updated in DB, new hash: ${updated.password.substring(0, 20)}...`);
+
+    // Vérifier immédiatement que le nouveau mot de passe fonctionne
+    const verifyNewPassword = await authService.verifyPassword(data.newPassword, updated.password);
+    console.log(`[DEBUG] verification of new password: ${verifyNewPassword}`);
+
+    if (!verifyNewPassword) {
+      console.error(`[ERROR] New password verification failed immediately after save!`);
+    }
 
     return { success: true };
   },
@@ -501,8 +527,7 @@ export const authService = {
     });
 
     // En production: envoyer l'email avec le lien
-    // Pour l'instant, on retourne le token (DEV ONLY)
-    const resetUrl = `${env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${env.APP_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
     // TODO: Intégrer Nodemailer pour envoyer l'email
     console.log(`[DEV] Reset URL pour ${email}: ${resetUrl}`);
@@ -519,6 +544,8 @@ export const authService = {
    * Réinitialiser le mot de passe avec le token
    */
   resetPassword: async (data: ResetPasswordDTO) => {
+    console.log(`[DEBUG] resetPassword with token: ${data.token.substring(0, 10)}...`);
+    
     // Hasher le token reçu pour comparer avec celui en base
     const hashedToken = crypto.createHash('sha256').update(data.token).digest('hex');
 
@@ -531,22 +558,30 @@ export const authService = {
     });
 
     if (!user) {
+      console.log(`[DEBUG] no user found with valid reset token`);
       throw new Error('INVALID_OR_EXPIRED_TOKEN');
     }
+
+    console.log(`[DEBUG] user found: ${user.email}`);
 
     // Hasher le nouveau mot de passe
     const hashedPassword = await authService.hashPassword(data.newPassword);
 
     // Mettre à jour le mot de passe et supprimer le token
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: user.id },
       data: {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpires: null,
-        updatedAt: new Date(),
       },
     });
+
+    console.log(`[DEBUG] password reset complete, new hash: ${updated.password.substring(0, 20)}...`);
+
+    // Vérifier immédiatement
+    const verifyNewPassword = await authService.verifyPassword(data.newPassword, updated.password);
+    console.log(`[DEBUG] verification of reset password: ${verifyNewPassword}`);
 
     // Invalider toutes les sessions existantes (sécurité)
     await prisma.session.deleteMany({
