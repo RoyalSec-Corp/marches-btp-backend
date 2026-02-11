@@ -37,6 +37,16 @@ export interface LoginDTO {
   password: string;
 }
 
+export interface ChangePasswordDTO {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordDTO {
+  token: string;
+  newPassword: string;
+}
+
 export interface TokenPayload {
   userId: number;
   email: string;
@@ -53,6 +63,11 @@ export const authService = {
   // Generer un code de parrainage unique
   generateReferralCode: (): string => {
     return crypto.randomBytes(4).toString('hex').toUpperCase();
+  },
+
+  // Générer un token de réinitialisation
+  generateResetToken: (): string => {
+    return crypto.randomBytes(32).toString('hex');
   },
 
   // Hasher le mot de passe
@@ -402,6 +417,146 @@ export const authService = {
     }
 
     return user;
+  },
+
+  /**
+   * Changer le mot de passe (utilisateur connecté)
+   * Fonctionne pour tous les types de comptes
+   */
+  changePassword: async (userId: number, data: ChangePasswordDTO) => {
+    // Récupérer l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    // Vérifier l'ancien mot de passe
+    const isCurrentPasswordValid = await authService.verifyPassword(
+      data.currentPassword,
+      user.password
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new Error('INVALID_CURRENT_PASSWORD');
+    }
+
+    // Vérifier que le nouveau mot de passe est différent
+    if (data.currentPassword === data.newPassword) {
+      throw new Error('SAME_PASSWORD');
+    }
+
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await authService.hashPassword(data.newPassword);
+
+    // Mettre à jour le mot de passe
+    await prisma.user.update({
+      where: { id: userId },
+      data: { 
+        password: hashedPassword,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Invalider toutes les sessions sauf la courante (optionnel, pour sécurité)
+    // On ne le fait pas ici pour ne pas déconnecter l'utilisateur
+
+    return { success: true };
+  },
+
+  /**
+   * Demande de réinitialisation de mot de passe (mot de passe oublié)
+   * Génère un token et le stocke (en prod, envoyer par email)
+   */
+  forgotPassword: async (email: string) => {
+    // Trouver l'utilisateur
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Ne pas révéler si l'email existe ou non (sécurité)
+    if (!user) {
+      // On retourne success même si l'email n'existe pas
+      return { 
+        success: true, 
+        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
+      };
+    }
+
+    // Générer un token de réinitialisation
+    const resetToken = authService.generateResetToken();
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
+
+    // Stocker le token hashé en base
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: resetTokenExpiry,
+      },
+    });
+
+    // En production: envoyer l'email avec le lien
+    // Pour l'instant, on retourne le token (DEV ONLY)
+    const resetUrl = `${env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+
+    // TODO: Intégrer Nodemailer pour envoyer l'email
+    console.log(`[DEV] Reset URL pour ${email}: ${resetUrl}`);
+
+    return {
+      success: true,
+      message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
+      // En dev seulement, retourner le token pour tester
+      ...(env.NODE_ENV === 'development' && { resetToken, resetUrl }),
+    };
+  },
+
+  /**
+   * Réinitialiser le mot de passe avec le token
+   */
+  resetPassword: async (data: ResetPasswordDTO) => {
+    // Hasher le token reçu pour comparer avec celui en base
+    const hashedToken = crypto.createHash('sha256').update(data.token).digest('hex');
+
+    // Trouver l'utilisateur avec ce token non expiré
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new Error('INVALID_OR_EXPIRED_TOKEN');
+    }
+
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await authService.hashPassword(data.newPassword);
+
+    // Mettre à jour le mot de passe et supprimer le token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Invalider toutes les sessions existantes (sécurité)
+    await prisma.session.deleteMany({
+      where: { userId: user.id },
+    });
+
+    return { 
+      success: true,
+      message: 'Mot de passe réinitialisé avec succès. Veuillez vous reconnecter.',
+    };
   },
 };
 
