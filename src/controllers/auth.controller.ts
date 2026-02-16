@@ -9,14 +9,14 @@ export const authController = {
 
       res.status(201).json({
         success: true,
-        message: 'Inscription reussie. Votre compte est en attente de validation.',
+        message: 'Inscription réussie. Bienvenue sur Marchés BTP !',
         data: result,
       });
     } catch (error: any) {
       if (error.message === 'EMAIL_ALREADY_EXISTS') {
         return res.status(409).json({
           success: false,
-          message: 'Cet email est deja utilise.',
+          message: 'Cet email est déjà utilisé.',
           error: 'EMAIL_ALREADY_EXISTS',
         });
       }
@@ -31,15 +31,22 @@ export const authController = {
 
       res.status(201).json({
         success: true,
-        message: 'Inscription reussie. Votre compte est en attente de validation.',
+        message: 'Inscription réussie. Bienvenue sur Marchés BTP !',
         data: result,
       });
     } catch (error: any) {
       if (error.message === 'EMAIL_ALREADY_EXISTS') {
         return res.status(409).json({
           success: false,
-          message: 'Cet email est deja utilise.',
+          message: 'Cet email est déjà utilisé.',
           error: 'EMAIL_ALREADY_EXISTS',
+        });
+      }
+      if (error.message === 'SIRET_ALREADY_EXISTS') {
+        return res.status(409).json({
+          success: false,
+          message: 'Ce numéro SIRET est déjà enregistré.',
+          error: 'SIRET_ALREADY_EXISTS',
         });
       }
       next(error);
@@ -54,7 +61,7 @@ export const authController = {
 
       res.json({
         success: true,
-        message: 'Connexion reussie.',
+        message: 'Connexion réussie.',
         data: result,
       });
     } catch (error: any) {
@@ -68,7 +75,7 @@ export const authController = {
       if (error.message === 'ACCOUNT_DISABLED') {
         return res.status(403).json({
           success: false,
-          message: 'Votre compte a ete desactive.',
+          message: 'Votre compte a été désactivé.',
           error: 'ACCOUNT_DISABLED',
         });
       }
@@ -87,7 +94,7 @@ export const authController = {
 
       res.json({
         success: true,
-        message: 'Deconnexion reussie.',
+        message: 'Déconnexion réussie.',
       });
     } catch (error) {
       next(error);
@@ -111,14 +118,14 @@ export const authController = {
 
       res.json({
         success: true,
-        message: 'Tokens rafraichis.',
+        message: 'Tokens rafraîchis.',
         data: tokens,
       });
     } catch (error: any) {
       if (error.message === 'SESSION_EXPIRED' || error.name === 'JsonWebTokenError') {
         return res.status(401).json({
           success: false,
-          message: 'Session expiree. Veuillez vous reconnecter.',
+          message: 'Session expirée. Veuillez vous reconnecter.',
           error: 'SESSION_EXPIRED',
         });
       }
@@ -134,7 +141,7 @@ export const authController = {
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: 'Non authentifie.',
+          message: 'Non authentifié.',
           error: 'UNAUTHORIZED',
         });
       }
@@ -149,7 +156,7 @@ export const authController = {
       if (error.message === 'USER_NOT_FOUND') {
         return res.status(404).json({
           success: false,
-          message: 'Utilisateur non trouve.',
+          message: 'Utilisateur non trouvé.',
           error: 'USER_NOT_FOUND',
         });
       }
@@ -165,7 +172,7 @@ export const authController = {
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: 'Non authentifie.',
+          message: 'Non authentifié.',
           error: 'UNAUTHORIZED',
         });
       }
@@ -193,7 +200,7 @@ export const authController = {
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: 'Non authentifie.',
+          message: 'Non authentifié.',
           error: 'UNAUTHORIZED',
         });
       }
