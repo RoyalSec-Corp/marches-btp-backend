@@ -30,6 +30,9 @@ export interface RegisterEntrepriseDTO {
   codePostal?: string;
   representantLegal: string;
   formeJuridique?: string;
+  secteurActivite?: string;
+  nom?: string;
+  prenom?: string;
 }
 
 export interface LoginDTO {
@@ -57,6 +60,23 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
+
+// Helpers pour nettoyer les données
+const cleanSiret = (siret: string | undefined): string => {
+  return siret ? siret.replace(/\D/g, '') : '';
+};
+
+const cleanPhone = (phone: string | undefined): string | undefined => {
+  if (!phone) return undefined;
+  const cleaned = phone.replace(/\s/g, '');
+  return cleaned || undefined;
+};
+
+const cleanPostalCode = (code: string | undefined): string | undefined => {
+  if (!code) return undefined;
+  const cleaned = code.replace(/\D/g, '');
+  return cleaned || undefined;
+};
 
 // Service d'authentification
 export const authService = {
@@ -111,12 +131,15 @@ export const authService = {
 
   // Inscription Freelance
   registerFreelance: async (data: RegisterFreelanceDTO) => {
+    console.log('[DEBUG] registerFreelance called with:', { ...data, password: '***' });
+    
     // Verifier si l'email existe deja
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (existingUser) {
+      console.log('[DEBUG] Email already exists:', data.email);
       throw new Error('EMAIL_ALREADY_EXISTS');
     }
 
@@ -134,17 +157,17 @@ export const authService = {
         userType: UserType.FREELANCE,
         nom: data.nom,
         prenom: data.prenom,
-        telephone: data.telephone,
+        telephone: cleanPhone(data.telephone),
         referralCode,
         freelance: {
           create: {
             nom: data.nom,
             prenom: data.prenom,
             email: data.email,
-            telephone: data.telephone,
+            telephone: cleanPhone(data.telephone),
             metier: data.metier,
             tarif: data.tarif,
-            siret: data.siret,
+            siret: cleanSiret(data.siret) || undefined,
             description: data.description,
             statutCompte: StatutCompte.EN_ATTENTE,
           },
@@ -154,6 +177,8 @@ export const authService = {
         freelance: true,
       },
     });
+
+    console.log('[DEBUG] Freelance created successfully:', user.id);
 
     // Generer les tokens
     const tokens = authService.generateTokens({
@@ -188,22 +213,36 @@ export const authService = {
 
   // Inscription Entreprise
   registerEntreprise: async (data: RegisterEntrepriseDTO) => {
+    console.log('[DEBUG] registerEntreprise called with:', { ...data, password: '***' });
+    
+    // Nettoyer le SIRET
+    const siret = cleanSiret(data.siret);
+    console.log('[DEBUG] Cleaned SIRET:', siret, 'length:', siret.length);
+    
+    // Valider le SIRET
+    if (!siret || siret.length !== 14) {
+      console.log('[DEBUG] Invalid SIRET format');
+      throw new Error('Le SIRET doit contenir exactement 14 chiffres.');
+    }
+    
     // Verifier si l'email existe deja
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (existingUser) {
-      throw new Error('EMAIL_ALREADY_EXISTS');
+      console.log('[DEBUG] Email already exists:', data.email);
+      throw new Error('Cet email est déjà utilisé.');
     }
 
     // Verifier si le SIRET existe deja
     const existingSiret = await prisma.entreprise.findUnique({
-      where: { siret: data.siret },
+      where: { siret: siret },
     });
 
     if (existingSiret) {
-      throw new Error('SIRET_ALREADY_EXISTS');
+      console.log('[DEBUG] SIRET already exists:', siret);
+      throw new Error('Ce numéro SIRET est déjà enregistré.');
     }
 
     // Hasher le mot de passe
@@ -212,29 +251,38 @@ export const authService = {
     // Generer un code de parrainage
     const referralCode = authService.generateReferralCode();
 
+    console.log('[DEBUG] Creating entreprise with data:', {
+      email: data.email,
+      raisonSociale: data.raisonSociale,
+      siret: siret,
+      representantLegal: data.representantLegal,
+    });
+
     // Creer l'utilisateur et le profil entreprise
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
         userType: UserType.ENTREPRISE,
-        nom: data.representantLegal,
-        telephone: data.telephone,
+        nom: data.nom || data.representantLegal,
+        prenom: data.prenom,
+        telephone: cleanPhone(data.telephone),
         adresse: data.adresse,
         ville: data.ville,
-        codePostal: data.codePostal,
+        codePostal: cleanPostalCode(data.codePostal),
         referralCode,
         entreprise: {
           create: {
             raisonSociale: data.raisonSociale,
-            siret: data.siret,
+            siret: siret,
             email: data.email,
-            telephone: data.telephone,
+            telephone: cleanPhone(data.telephone),
             adresse: data.adresse,
             ville: data.ville,
-            codePostal: data.codePostal,
+            codePostal: cleanPostalCode(data.codePostal),
             representantLegal: data.representantLegal,
             formeJuridique: data.formeJuridique,
+            secteurActivite: data.secteurActivite || 'BTP',
             statutCompte: StatutCompte.EN_ATTENTE,
           },
         },
@@ -243,6 +291,8 @@ export const authService = {
         entreprise: true,
       },
     });
+
+    console.log('[DEBUG] Entreprise created successfully:', user.id);
 
     // Generer les tokens
     const tokens = authService.generateTokens({
