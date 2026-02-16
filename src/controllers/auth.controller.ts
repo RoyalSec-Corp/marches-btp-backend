@@ -5,6 +5,7 @@ export const authController = {
   // POST /api/auth/register/freelance
   registerFreelance: async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('[DEBUG] registerFreelance controller called');
       const result = await authService.registerFreelance(req.body);
 
       res.status(201).json({
@@ -13,6 +14,8 @@ export const authController = {
         data: result,
       });
     } catch (error: any) {
+      console.log('[DEBUG] registerFreelance error:', error.message);
+      
       if (error.message === 'EMAIL_ALREADY_EXISTS') {
         return res.status(409).json({
           success: false,
@@ -20,13 +23,22 @@ export const authController = {
           error: 'EMAIL_ALREADY_EXISTS',
         });
       }
-      next(error);
+      
+      // Transmettre le message d'erreur tel quel (déjà en français)
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Une erreur est survenue.',
+        error: 'REGISTRATION_ERROR',
+      });
     }
   },
 
   // POST /api/auth/register/entreprise
   registerEntreprise: async (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('[DEBUG] registerEntreprise controller called');
+      console.log('[DEBUG] Request body:', { ...req.body, password: '***' });
+      
       const result = await authService.registerEntreprise(req.body);
 
       res.status(201).json({
@@ -35,21 +47,14 @@ export const authController = {
         data: result,
       });
     } catch (error: any) {
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Cet email est déjà utilisé.',
-          error: 'EMAIL_ALREADY_EXISTS',
-        });
-      }
-      if (error.message === 'SIRET_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Ce numéro SIRET est déjà enregistré.',
-          error: 'SIRET_ALREADY_EXISTS',
-        });
-      }
-      next(error);
+      console.log('[DEBUG] registerEntreprise error:', error.message);
+      
+      // Transmettre le message d'erreur tel quel (déjà en français depuis le service)
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Une erreur est survenue lors de l\'inscription.',
+        error: 'REGISTRATION_ERROR',
+      });
     }
   },
 
