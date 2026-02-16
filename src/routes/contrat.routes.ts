@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { contratController } from '../controllers/contrat.controller.js';
-import { authenticate, requireFreelance, requireEntreprise } from '../middlewares/auth.middleware.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
