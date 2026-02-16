@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body, validationResult, ValidationError } from 'express-validator';
+
+interface FieldValidationError extends ValidationError {
+  path?: string;
+}
 
 // Helper pour gerer les erreurs de validation
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
@@ -12,7 +16,7 @@ const handleValidationErrors = (req: Request, res: Response, next: NextFunction)
       success: false,
       message: errorMessages || 'Données invalides.',
       errors: errors.array().map((err) => ({
-        field: (err as any).path,
+        field: (err as FieldValidationError).path,
         message: err.msg,
       })),
     });
