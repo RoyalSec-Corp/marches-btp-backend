@@ -1,9 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 
+interface AuthenticatedRequest extends Request {
+  user?: {
+    userId?: number;
+    id?: number;
+  };
+}
+
 export const authController = {
   // POST /api/auth/register/freelance
-  registerFreelance: async (req: Request, res: Response, next: NextFunction) => {
+  registerFreelance: async (req: Request, res: Response, _next: NextFunction) => {
     try {
       console.log('[DEBUG] registerFreelance controller called');
       const result = await authService.registerFreelance(req.body);
@@ -13,10 +20,11 @@ export const authController = {
         message: 'Inscription réussie. Bienvenue sur Marchés BTP !',
         data: result,
       });
-    } catch (error: any) {
-      console.log('[DEBUG] registerFreelance error:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.log('[DEBUG] registerFreelance error:', err.message);
       
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
+      if (err.message === 'EMAIL_ALREADY_EXISTS') {
         return res.status(409).json({
           success: false,
           message: 'Cet email est déjà utilisé.',
@@ -27,14 +35,14 @@ export const authController = {
       // Transmettre le message d'erreur tel quel (déjà en français)
       return res.status(400).json({
         success: false,
-        message: error.message || 'Une erreur est survenue.',
+        message: err.message || 'Une erreur est survenue.',
         error: 'REGISTRATION_ERROR',
       });
     }
   },
 
   // POST /api/auth/register/entreprise
-  registerEntreprise: async (req: Request, res: Response, next: NextFunction) => {
+  registerEntreprise: async (req: Request, res: Response, _next: NextFunction) => {
     try {
       console.log('[DEBUG] registerEntreprise controller called');
       console.log('[DEBUG] Request body:', { ...req.body, password: '***' });
@@ -46,13 +54,14 @@ export const authController = {
         message: 'Inscription réussie. Bienvenue sur Marchés BTP !',
         data: result,
       });
-    } catch (error: any) {
-      console.log('[DEBUG] registerEntreprise error:', error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.log('[DEBUG] registerEntreprise error:', err.message);
       
       // Transmettre le message d'erreur tel quel (déjà en français depuis le service)
       return res.status(400).json({
         success: false,
-        message: error.message || 'Une erreur est survenue lors de l\'inscription.',
+        message: err.message || 'Une erreur est survenue lors de l\'inscription.',
         error: 'REGISTRATION_ERROR',
       });
     }
@@ -69,15 +78,16 @@ export const authController = {
         message: 'Connexion réussie.',
         data: result,
       });
-    } catch (error: any) {
-      if (error.message === 'INVALID_CREDENTIALS') {
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'INVALID_CREDENTIALS') {
         return res.status(401).json({
           success: false,
           message: 'Email ou mot de passe incorrect.',
           error: 'INVALID_CREDENTIALS',
         });
       }
-      if (error.message === 'ACCOUNT_DISABLED') {
+      if (err.message === 'ACCOUNT_DISABLED') {
         return res.status(403).json({
           success: false,
           message: 'Votre compte a été désactivé.',
@@ -126,8 +136,9 @@ export const authController = {
         message: 'Tokens rafraîchis.',
         data: tokens,
       });
-    } catch (error: any) {
-      if (error.message === 'SESSION_EXPIRED' || error.name === 'JsonWebTokenError') {
+    } catch (error: unknown) {
+      const err = error as Error & { name?: string };
+      if (err.message === 'SESSION_EXPIRED' || err.name === 'JsonWebTokenError') {
         return res.status(401).json({
           success: false,
           message: 'Session expirée. Veuillez vous reconnecter.',
@@ -141,7 +152,8 @@ export const authController = {
   // GET /api/auth/profile
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId || (req as any).user?.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.userId || authReq.user?.id;
 
       if (!userId) {
         return res.status(401).json({
@@ -157,8 +169,9 @@ export const authController = {
         success: true,
         data: profile,
       });
-    } catch (error: any) {
-      if (error.message === 'USER_NOT_FOUND') {
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'USER_NOT_FOUND') {
         return res.status(404).json({
           success: false,
           message: 'Utilisateur non trouvé.',
@@ -170,9 +183,10 @@ export const authController = {
   },
 
   // GET /api/auth/verify
-  verifyToken: async (req: Request, res: Response, next: NextFunction) => {
+  verifyToken: async (req: Request, res: Response, _next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId || (req as any).user?.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.userId || authReq.user?.id;
 
       if (!userId) {
         return res.status(401).json({
@@ -188,7 +202,7 @@ export const authController = {
         success: true,
         data: user,
       });
-    } catch (error) {
+    } catch (_error) {
       return res.status(401).json({
         success: false,
         message: 'Token invalide.',
@@ -200,7 +214,8 @@ export const authController = {
   // PUT /api/auth/change-password
   changePassword: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.userId || (req as any).user?.id;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.userId || authReq.user?.id;
 
       if (!userId) {
         return res.status(401).json({
@@ -235,22 +250,23 @@ export const authController = {
         success: true,
         message: 'Mot de passe modifié avec succès.',
       });
-    } catch (error: any) {
-      if (error.message === 'INVALID_CURRENT_PASSWORD') {
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'INVALID_CURRENT_PASSWORD') {
         return res.status(400).json({
           success: false,
           message: 'Mot de passe actuel incorrect.',
           error: 'INVALID_CURRENT_PASSWORD',
         });
       }
-      if (error.message === 'SAME_PASSWORD') {
+      if (err.message === 'SAME_PASSWORD') {
         return res.status(400).json({
           success: false,
           message: 'Le nouveau mot de passe doit être différent de l\'ancien.',
           error: 'SAME_PASSWORD',
         });
       }
-      if (error.message === 'USER_NOT_FOUND') {
+      if (err.message === 'USER_NOT_FOUND') {
         return res.status(404).json({
           success: false,
           message: 'Utilisateur non trouvé.',
@@ -315,8 +331,9 @@ export const authController = {
         success: true,
         message: result.message,
       });
-    } catch (error: any) {
-      if (error.message === 'INVALID_OR_EXPIRED_TOKEN') {
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'INVALID_OR_EXPIRED_TOKEN') {
         return res.status(400).json({
           success: false,
           message: 'Lien de réinitialisation invalide ou expiré.',
