@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { contratService } from '../services/contrat.service.js';
-import { ContratStatus } from '@prisma/client';
+import { ContratStatus, PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -13,43 +15,150 @@ interface AuthenticatedRequest extends Request {
 class ContratController {
   /**
    * Créer un nouveau contrat
-   * POST /api/contrats
+   * POST /api/contrats ou /api/contracts
+   * 
+   * Supporte deux modes:
+   * - direct: contrat avec un freelance spécifique (freelanceId requis)
+   * - publication: mission ouverte aux candidatures (freelanceId optionnel)
    */
   async create(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
+      const userType = req.user?.userType;
+      
       if (!userId) {
         res.status(401).json({ error: 'Non authentifié' });
         return;
       }
 
-      const { titre, description, montant, entrepriseId, freelanceId, appelOffreId, dateDebut, dateFin } = req.body;
+      console.log('[DEBUG] Création contrat - userId:', userId, 'userType:', userType);
+      console.log('[DEBUG] Body reçu:', JSON.stringify(req.body, null, 2));
 
-      if (!titre || !montant || !entrepriseId || !freelanceId) {
-        res.status(400).json({ error: 'Champs requis: titre, montant, entrepriseId, freelanceId' });
+      // Mapper les champs anglais vers français (compatibilité frontend)
+      const titre = req.body.titre || req.body.title || '';
+      const description = req.body.description || '';
+      const montant = parseFloat(req.body.montant || req.body.budget || '0');
+      const type = req.body.type || 'direct'; // 'direct' ou 'publication'
+      const freelanceId = req.body.freelanceId ? parseInt(req.body.freelanceId) : null;
+      const appelOffreId = req.body.appelOffreId ? parseInt(req.body.appelOffreId) : null;
+      const dateDebut = req.body.dateDebut || req.body.startDate || null;
+      const dateFin = req.body.dateFin || req.body.endDate || null;
+      
+      // Champs supplémentaires du frontend
+      const location = req.body.location || '';
+      const budgetUnit = req.body.budgetUnit || 'day';
+      const duration = req.body.duration ? parseInt(req.body.duration) : null;
+      const durationUnit = req.body.durationUnit || 'jours';
+      const requirements = req.body.requirements || '';
+      const skills = req.body.skills || [];
+
+      // Validation de base
+      if (!titre.trim()) {
+        res.status(400).json({ error: 'Le titre est obligatoire' });
+        return;
+      }
+
+      if (isNaN(montant) || montant < 0) {
+        res.status(400).json({ error: 'Le budget doit être un nombre positif' });
+        return;
+      }
+
+      // Récupérer l'entreprise de l'utilisateur connecté
+      let entrepriseId = req.body.entrepriseId ? parseInt(req.body.entrepriseId) : null;
+      
+      if (!entrepriseId) {
+        // Chercher l'entreprise associée à l'utilisateur
+        const entreprise = await prisma.entreprise.findUnique({
+          where: { userId }
+        });
+        
+        if (entreprise) {
+          entrepriseId = entreprise.id;
+        } else {
+          res.status(400).json({ 
+            error: 'Aucune entreprise associée à votre compte. Veuillez compléter votre profil entreprise.' 
+          });
+          return;
+        }
+      }
+
+      console.log('[DEBUG] entrepriseId résolu:', entrepriseId);
+
+      // Mode PUBLICATION: créer une mission ouverte (sans freelance)
+      if (type === 'publication') {
+        const contrat = await prisma.contrat.create({
+          data: {
+            titre: titre.trim(),
+            description: description.trim() || `Mission: ${titre}`,
+            montant,
+            entrepriseId,
+            // freelanceId est null pour une publication
+            appelOffreId,
+            dateDebut: dateDebut ? new Date(dateDebut) : null,
+            dateFin: dateFin ? new Date(dateFin) : null,
+            statut: ContratStatus.BROUILLON,
+            // Stocker les infos supplémentaires dans la description
+            // ou utiliser des champs additionnels si disponibles
+          },
+          include: {
+            entreprise: {
+              include: {
+                user: { select: { id: true, email: true, nom: true, prenom: true } },
+              },
+            },
+          },
+        });
+
+        console.log('[DEBUG] Contrat publication créé:', contrat.id);
+
+        res.status(201).json({
+          message: 'Mission publiée avec succès',
+          contract: contrat,
+          contrat,
+        });
+        return;
+      }
+
+      // Mode DIRECT: contrat avec un freelance spécifique
+      if (!freelanceId) {
+        res.status(400).json({ 
+          error: 'Pour un contrat direct, vous devez sélectionner un freelance' 
+        });
+        return;
+      }
+
+      // Vérifier que le freelance existe
+      const freelance = await prisma.freelance.findUnique({
+        where: { id: freelanceId },
+      });
+      
+      if (!freelance) {
+        res.status(404).json({ error: 'Freelance non trouvé' });
         return;
       }
 
       const contrat = await contratService.create({
-        titre,
-        description,
-        montant: parseFloat(montant),
-        entrepriseId: parseInt(entrepriseId),
-        freelanceId: parseInt(freelanceId),
-        appelOffreId: appelOffreId ? parseInt(appelOffreId) : undefined,
+        titre: titre.trim(),
+        description: description.trim(),
+        montant,
+        entrepriseId,
+        freelanceId,
+        appelOffreId,
         dateDebut: dateDebut ? new Date(dateDebut) : undefined,
         dateFin: dateFin ? new Date(dateFin) : undefined,
       }, userId);
 
+      console.log('[DEBUG] Contrat direct créé:', contrat.id);
+
       res.status(201).json({
         message: 'Contrat créé avec succès',
+        contract: contrat,
         contrat,
       });
     } catch (error) {
-      console.error('Erreur création contrat:', error);
+      console.error('[ERROR] Erreur création contrat:', error);
       res.status(500).json({
-        error: 'Erreur lors de la création du contrat',
-        details: error instanceof Error ? error.message : 'Erreur inconnue',
+        error: error instanceof Error ? error.message : 'Erreur lors de la création du contrat',
       });
     }
   }
