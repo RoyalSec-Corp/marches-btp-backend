@@ -12,7 +12,9 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // Etendre le type Request pour inclure user
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: {
@@ -57,7 +59,7 @@ export const authenticate = async (
         userType: payload.userType,
       };
       next();
-    } catch (error) {
+    } catch (_tokenError) {
       return res.status(401).json({
         success: false,
         message: 'Token invalide ou expire.',
@@ -91,7 +93,7 @@ export const optionalAuth = async (
           email: payload.email,
           userType: payload.userType,
         };
-      } catch (error) {
+      } catch (_tokenError) {
         // Token invalide, on continue sans user
       }
     }
