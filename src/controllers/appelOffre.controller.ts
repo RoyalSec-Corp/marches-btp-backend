@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { appelOffreService } from '../services/appelOffre.service.js';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 
+interface PrismaError extends Error {
+  code?: string;
+}
+
 class AppelOffreController {
   /**
    * POST /api/calls-for-tenders
@@ -133,11 +137,12 @@ class AppelOffreController {
       });
 
       res.status(201).json({ success: true, data: candidature });
-    } catch (error: any) {
-      if (error.message.includes('non trouvé')) {
-        return res.status(404).json({ success: false, message: error.message });
+    } catch (error: unknown) {
+      const err = error as PrismaError;
+      if (err.message?.includes('non trouvé')) {
+        return res.status(404).json({ success: false, message: err.message });
       }
-      if (error.code === 'P2002') {
+      if (err.code === 'P2002') {
         return res.status(409).json({ success: false, message: 'Vous avez déjà postulé à cet appel d\'offre' });
       }
       next(error);
