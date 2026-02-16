@@ -5,9 +5,12 @@ import { body, validationResult } from 'express-validator';
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // Extraire les messages d'erreur pour un affichage simple
+    const errorMessages = errors.array().map((err) => err.msg).join(' ');
+    
     return res.status(400).json({
       success: false,
-      message: 'Donnees invalides.',
+      message: errorMessages || 'Données invalides.',
       errors: errors.array().map((err) => ({
         field: (err as any).path,
         message: err.msg,
@@ -25,34 +28,32 @@ export const validateRegisterFreelance = [
     .normalizeEmail(),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Le mot de passe doit contenir au moins 8 caracteres.')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.'),
+    .withMessage('Le mot de passe doit contenir au moins 8 caractères.'),
   body('nom')
     .trim()
     .notEmpty()
     .withMessage('Le nom est requis.')
     .isLength({ min: 2, max: 50 })
-    .withMessage('Le nom doit contenir entre 2 et 50 caracteres.'),
+    .withMessage('Le nom doit contenir entre 2 et 50 caractères.'),
   body('prenom')
     .trim()
     .notEmpty()
-    .withMessage('Le prenom est requis.')
+    .withMessage('Le prénom est requis.')
     .isLength({ min: 2, max: 50 })
-    .withMessage('Le prenom doit contenir entre 2 et 50 caracteres.'),
+    .withMessage('Le prénom doit contenir entre 2 et 50 caractères.'),
   body('metier')
     .trim()
     .notEmpty()
-    .withMessage('Le metier est requis.'),
+    .withMessage('Le métier est requis.'),
   body('tarif')
     .isFloat({ min: 0 })
-    .withMessage('Le tarif doit etre un nombre positif.'),
+    .withMessage('Le tarif doit être un nombre positif.'),
   body('telephone')
-    .optional()
-    .matches(/^(\+33|0)[1-9](\d{2}){4}$/)
-    .withMessage('Numero de telephone invalide.'),
+    .optional({ checkFalsy: true })
+    .matches(/^[\d\s+()-]{10,20}$/)
+    .withMessage('Numéro de téléphone invalide.'),
   body('siret')
-    .optional()
+    .optional({ checkFalsy: true })
     .matches(/^\d{14}$/)
     .withMessage('Le SIRET doit contenir 14 chiffres.'),
   handleValidationErrors,
@@ -66,32 +67,45 @@ export const validateRegisterEntreprise = [
     .normalizeEmail(),
   body('password')
     .isLength({ min: 8 })
-    .withMessage('Le mot de passe doit contenir au moins 8 caracteres.')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.'),
+    .withMessage('Le mot de passe doit contenir au moins 8 caractères.'),
   body('raisonSociale')
     .trim()
     .notEmpty()
     .withMessage('La raison sociale est requise.')
     .isLength({ min: 2, max: 100 })
-    .withMessage('La raison sociale doit contenir entre 2 et 100 caracteres.'),
+    .withMessage('La raison sociale doit contenir entre 2 et 100 caractères.'),
   body('siret')
     .matches(/^\d{14}$/)
     .withMessage('Le SIRET doit contenir 14 chiffres.'),
   body('representantLegal')
     .trim()
     .notEmpty()
-    .withMessage('Le nom du representant legal est requis.'),
+    .withMessage('Le nom du représentant légal est requis.'),
   body('telephone')
-    .optional()
-    .matches(/^(\+33|0)[1-9](\d{2}){4}$/)
-    .withMessage('Numero de telephone invalide.'),
+    .optional({ checkFalsy: true })
+    .matches(/^[\d\s+()-]{10,20}$/)
+    .withMessage('Numéro de téléphone invalide.'),
   body('codePostal')
-    .optional()
+    .optional({ checkFalsy: true })
     .matches(/^\d{5}$/)
-    .withMessage('Code postal invalide.'),
+    .withMessage('Code postal invalide (5 chiffres).'),
   body('formeJuridique')
-    .optional()
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('nom')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('prenom')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('adresse')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('ville')
+    .optional({ checkFalsy: true })
+    .trim(),
+  body('secteurActivite')
+    .optional({ checkFalsy: true })
     .trim(),
   handleValidationErrors,
 ];
