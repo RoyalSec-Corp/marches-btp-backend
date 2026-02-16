@@ -2,6 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 import { JwtPayload } from '../types/auth.types.js';
 
+interface JwtError extends Error {
+  name: string;
+}
+
 /**
  * Middleware d'authentification JWT
  * Vérifie le token dans le header Authorization
@@ -33,8 +37,9 @@ export const authenticate = async (
     req.user = payload as JwtPayload;
 
     next();
-  } catch (error: any) {
-    if (error.name === 'TokenExpiredError') {
+  } catch (error: unknown) {
+    const err = error as JwtError;
+    if (err.name === 'TokenExpiredError') {
       res.status(401).json({
         success: false,
         message: 'Token expiré',
@@ -43,7 +48,7 @@ export const authenticate = async (
       return;
     }
 
-    if (error.name === 'JsonWebTokenError') {
+    if (err.name === 'JsonWebTokenError') {
       res.status(401).json({
         success: false,
         message: 'Token invalide',
