@@ -23,6 +23,7 @@ router.get('/health', (_req, res) => {
       entreprises: '/api/entreprises',
       appelsOffres: '/api/appels-offres',
       contrats: '/api/contrats',
+      contracts: '/api/contracts',
       notifications: '/api/notifications',
       geocoding: '/api/geocoding',
       paiements: '/api/paiements',
@@ -40,6 +41,7 @@ router.use('/entreprises', entrepriseRoutes);
 // Routes métier
 router.use('/appels-offres', appelOffreRoutes);
 router.use('/contrats', contratRoutes);
+router.use('/contracts', contratRoutes); // Alias anglais pour compatibilité frontend
 router.use('/notifications', notificationRoutes);
 router.use('/paiements', paiementRoutes);
 
