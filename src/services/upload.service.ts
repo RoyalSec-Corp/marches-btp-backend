@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { deleteFile, getFileUrl } from '../config/multer.config.js';
-import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -32,7 +31,9 @@ class UploadService {
   processUploadedFiles(files: { [fieldname: string]: Express.Multer.File[] } | undefined): Record<string, DocumentInfo> {
     const documents: Record<string, DocumentInfo> = {};
 
-    if (!files) return documents;
+    if (!files) {
+      return documents;
+    }
 
     for (const [fieldname, fileArray] of Object.entries(files)) {
       if (fileArray && fileArray.length > 0) {
@@ -56,7 +57,7 @@ class UploadService {
    * Mettre à jour les documents d'un freelance
    */
   async updateFreelanceDocuments(userId: number, documents: Record<string, DocumentInfo>): Promise<void> {
-    const updateData: any = {};
+    const updateData: Prisma.FreelanceUpdateInput = {};
 
     // Mapper les documents aux champs Prisma
     if (documents.photo) {
@@ -101,7 +102,7 @@ class UploadService {
    * Mettre à jour les documents d'une entreprise
    */
   async updateEntrepriseDocuments(userId: number, documents: Record<string, DocumentInfo>): Promise<void> {
-    const updateData: any = {};
+    const updateData: Prisma.EntrepriseUpdateInput = {};
 
     if (documents.logo) {
       updateData.logoUrl = documents.logo.url;
