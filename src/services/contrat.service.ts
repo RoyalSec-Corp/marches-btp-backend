@@ -32,11 +32,18 @@ export interface ContratFilters {
   dateDebutTo?: Date;
 }
 
+interface ContratListResult {
+  data: Prisma.ContratGetPayload<{ include: { entreprise: { include: { user: true } }; freelance: { include: { user: true } } } }>[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 class ContratService {
   /**
    * Créer un nouveau contrat
    */
-  async create(data: CreateContratInput, creatorId: number): Promise<any> {
+  async create(data: CreateContratInput, _creatorId: number): Promise<Prisma.ContratGetPayload<{ include: { entreprise: true; freelance: true; appelOffre: true } }>> {
     // Vérifier que l'entreprise existe
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: data.entrepriseId },
@@ -87,7 +94,7 @@ class ContratService {
   /**
    * Récupérer un contrat par ID
    */
-  async findById(id: number): Promise<any> {
+  async findById(id: number): Promise<Prisma.ContratGetPayload<{ include: { entreprise: true; freelance: true; appelOffre: true; signatures: true; documents: true; milestones: true } }>> {
     const contrat = await prisma.contrat.findUnique({
       where: { id },
       include: {
@@ -118,22 +125,29 @@ class ContratService {
   /**
    * Lister les contrats avec filtres et pagination
    */
-  async list(filters: ContratFilters, page: number = 1, limit: number = 10): Promise<{
-    data: any[];
-    total: number;
-    page: number;
-    totalPages: number;
-  }> {
+  async list(filters: ContratFilters, page: number = 1, limit: number = 10): Promise<ContratListResult> {
     const where: Prisma.ContratWhereInput = {};
 
-    if (filters.statut) where.statut = filters.statut;
-    if (filters.entrepriseId) where.entrepriseId = filters.entrepriseId;
-    if (filters.freelanceId) where.freelanceId = filters.freelanceId;
-    if (filters.appelOffreId) where.appelOffreId = filters.appelOffreId;
+    if (filters.statut) {
+      where.statut = filters.statut;
+    }
+    if (filters.entrepriseId) {
+      where.entrepriseId = filters.entrepriseId;
+    }
+    if (filters.freelanceId) {
+      where.freelanceId = filters.freelanceId;
+    }
+    if (filters.appelOffreId) {
+      where.appelOffreId = filters.appelOffreId;
+    }
     if (filters.dateDebutFrom || filters.dateDebutTo) {
       where.dateDebut = {};
-      if (filters.dateDebutFrom) where.dateDebut.gte = filters.dateDebutFrom;
-      if (filters.dateDebutTo) where.dateDebut.lte = filters.dateDebutTo;
+      if (filters.dateDebutFrom) {
+        where.dateDebut.gte = filters.dateDebutFrom;
+      }
+      if (filters.dateDebutTo) {
+        where.dateDebut.lte = filters.dateDebutTo;
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -170,8 +184,8 @@ class ContratService {
    * Récupérer les contrats d'un utilisateur (freelance ou entreprise)
    * Retourne liste vide si le profil n'existe pas encore
    */
-  async listByUser(userId: number, userType: 'FREELANCE' | 'ENTREPRISE', page: number = 1, limit: number = 10): Promise<any> {
-    let where: Prisma.ContratWhereInput = {};
+  async listByUser(userId: number, userType: 'FREELANCE' | 'ENTREPRISE', page: number = 1, limit: number = 10): Promise<ContratListResult> {
+    const where: Prisma.ContratWhereInput = {};
 
     if (userType === 'FREELANCE') {
       const freelance = await prisma.freelance.findUnique({ where: { userId } });
@@ -195,7 +209,7 @@ class ContratService {
   /**
    * Mettre à jour un contrat
    */
-  async update(id: number, data: UpdateContratInput): Promise<any> {
+  async update(id: number, data: UpdateContratInput): Promise<Prisma.ContratGetPayload<{ include: { entreprise: true; freelance: true } }>> {
     const contrat = await prisma.contrat.findUnique({ where: { id } });
     if (!contrat) {
       throw new Error('Contrat non trouvé');
@@ -219,7 +233,7 @@ class ContratService {
   /**
    * Envoyer le contrat pour signature
    */
-  async sendForSignature(id: number): Promise<any> {
+  async sendForSignature(id: number): Promise<Prisma.ContratGetPayload<object>> {
     const contrat = await prisma.contrat.findUnique({ where: { id } });
     if (!contrat) {
       throw new Error('Contrat non trouvé');
@@ -238,7 +252,7 @@ class ContratService {
   /**
    * Signer un contrat
    */
-  async sign(contratId: number, userId: number, signatureData: string): Promise<any> {
+  async sign(contratId: number, userId: number, signatureData: string): Promise<Prisma.ContratGetPayload<{ include: { signatures: true; entreprise: true; freelance: true } }>> {
     const contrat = await prisma.contrat.findUnique({
       where: { id: contratId },
       include: { freelance: true, entreprise: true, signatures: true },
@@ -254,7 +268,7 @@ class ContratService {
 
     // Déterminer le type de signataire
     let signerType: 'FREELANCE' | 'ENTREPRISE';
-    if (contrat.freelance.userId === userId) {
+    if (contrat.freelance?.userId === userId) {
       signerType = 'FREELANCE';
     } else if (contrat.entreprise.userId === userId) {
       signerType = 'ENTREPRISE';
@@ -305,7 +319,7 @@ class ContratService {
   /**
    * Démarrer un contrat (après signature)
    */
-  async start(id: number): Promise<any> {
+  async start(id: number): Promise<Prisma.ContratGetPayload<object>> {
     const contrat = await prisma.contrat.findUnique({ where: { id } });
     if (!contrat) {
       throw new Error('Contrat non trouvé');
@@ -327,7 +341,7 @@ class ContratService {
   /**
    * Terminer un contrat
    */
-  async complete(id: number): Promise<any> {
+  async complete(id: number): Promise<Prisma.ContratGetPayload<object>> {
     const contrat = await prisma.contrat.findUnique({ where: { id } });
     if (!contrat) {
       throw new Error('Contrat non trouvé');
@@ -349,7 +363,7 @@ class ContratService {
   /**
    * Annuler un contrat
    */
-  async cancel(id: number, reason?: string): Promise<any> {
+  async cancel(id: number, reason?: string): Promise<Prisma.ContratGetPayload<object>> {
     const contrat = await prisma.contrat.findUnique({ where: { id } });
     if (!contrat) {
       throw new Error('Contrat non trouvé');
@@ -371,16 +385,27 @@ class ContratService {
   /**
    * Obtenir les statistiques des contrats
    */
-  async getStats(userId?: number, userType?: 'FREELANCE' | 'ENTREPRISE'): Promise<any> {
-    let where: Prisma.ContratWhereInput = {};
+  async getStats(userId?: number, userType?: 'FREELANCE' | 'ENTREPRISE'): Promise<{
+    total: number;
+    enCours: number;
+    termines: number;
+    enAttente: number;
+    brouillons: number;
+    montantTotal: number;
+  }> {
+    const where: Prisma.ContratWhereInput = {};
 
     if (userId && userType) {
       if (userType === 'FREELANCE') {
         const freelance = await prisma.freelance.findUnique({ where: { userId } });
-        if (freelance) where.freelanceId = freelance.id;
+        if (freelance) {
+          where.freelanceId = freelance.id;
+        }
       } else {
         const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
-        if (entreprise) where.entrepriseId = entreprise.id;
+        if (entreprise) {
+          where.entrepriseId = entreprise.id;
+        }
       }
     }
 
