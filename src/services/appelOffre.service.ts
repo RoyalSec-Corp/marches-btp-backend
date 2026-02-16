@@ -217,7 +217,9 @@ class AppelOffreService {
       },
     });
 
-    if (!appel) return null;
+    if (!appel) {
+      return null;
+    }
 
     return {
       id: appel.id,
@@ -353,18 +355,24 @@ class AppelOffreService {
    */
   async apply(appelOffreId: number, userId: number, data: ApplyData) {
     const appel = await prisma.appelOffre.findUnique({ where: { id: appelOffreId } });
-    if (!appel) throw new Error('Appel d\'offre non trouvé');
+    if (!appel) {
+      throw new Error('Appel d\'offre non trouvé');
+    }
 
     let freelanceId: number | null = null;
     let entrepriseId: number | null = null;
 
     if (data.typeCandidat === 'FREELANCE') {
       const freelance = await prisma.freelance.findUnique({ where: { userId } });
-      if (!freelance) throw new Error('Profil freelance non trouvé');
+      if (!freelance) {
+        throw new Error('Profil freelance non trouvé');
+      }
       freelanceId = freelance.id;
     } else {
       const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
-      if (!entreprise) throw new Error('Profil entreprise non trouvé');
+      if (!entreprise) {
+        throw new Error('Profil entreprise non trouvé');
+      }
       entrepriseId = entreprise.id;
     }
 
@@ -438,7 +446,7 @@ class AppelOffreService {
   /**
    * Accepter une candidature
    */
-  async acceptApplication(appelOffreId: number, applicationId: number) {
+  async acceptApplication(_appelOffreId: number, applicationId: number) {
     return prisma.appelOffreCandidature.update({
       where: { id: applicationId },
       data: { statut: 'ACCEPTE' },
@@ -448,7 +456,7 @@ class AppelOffreService {
   /**
    * Refuser une candidature
    */
-  async rejectApplication(appelOffreId: number, applicationId: number) {
+  async rejectApplication(_appelOffreId: number, applicationId: number) {
     return prisma.appelOffreCandidature.update({
       where: { id: applicationId },
       data: { statut: 'REFUSE' },
