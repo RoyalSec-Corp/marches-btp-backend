@@ -1,12 +1,41 @@
-import { PrismaClient, PaymentStatus } from '@prisma/client';
+import { PrismaClient, PaymentStatus, MethodePaiement } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+interface PaymentHistoryItem {
+  date: string;
+  mission: string;
+  mode?: string;
+  freelance?: string;
+  amount: number;
+  commission?: number;
+  net?: number;
+  status: string;
+  type?: string;
+  method?: string;
+}
+
+interface FreelancePaymentStats {
+  total: number;
+  platform: number;
+  cash: number;
+  wallet: number;
+  pending_commission_deductions: number;
+  history: PaymentHistoryItem[];
+}
+
+interface EntreprisePaymentStats {
+  total: number;
+  paid: number;
+  pending: number;
+  history: PaymentHistoryItem[];
+}
 
 class PaiementService {
   /**
    * Récupérer les paiements d'un freelance avec statistiques
    */
-  async getFreelancePayments(freelanceId: number) {
+  async getFreelancePayments(freelanceId: number): Promise<FreelancePaymentStats> {
     // Récupérer tous les paiements où le freelance est bénéficiaire
     const paiements = await prisma.paiement.findMany({
       where: {
@@ -40,7 +69,7 @@ class PaiementService {
       pending_commission_deductions: 0,
     };
 
-    const history: any[] = [];
+    const history: PaymentHistoryItem[] = [];
 
     for (const paiement of paiements) {
       if (paiement.statut === PaymentStatus.VALIDE || paiement.statut === PaymentStatus.COMPLETE) {
@@ -94,7 +123,7 @@ class PaiementService {
   /**
    * Récupérer les paiements d'une entreprise
    */
-  async getEntreprisePayments(entrepriseId: number) {
+  async getEntreprisePayments(entrepriseId: number): Promise<EntreprisePaymentStats> {
     const paiements = await prisma.paiement.findMany({
       where: {
         payeurId: entrepriseId,
@@ -125,7 +154,7 @@ class PaiementService {
       pending: 0,
     };
 
-    const history: any[] = [];
+    const history: PaymentHistoryItem[] = [];
 
     for (const paiement of paiements) {
       stats.total += paiement.montant;
@@ -186,7 +215,7 @@ class PaiementService {
         payeurType: data.payeurType,
         beneficiaireId: data.beneficiaireId,
         beneficiaireType: data.beneficiaireType,
-        methodePaiement: data.methodePaiement as any,
+        methodePaiement: data.methodePaiement as MethodePaiement,
         dateEcheance: data.dateEcheance,
       },
     });
