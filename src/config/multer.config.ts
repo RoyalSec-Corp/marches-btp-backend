@@ -3,6 +3,13 @@ import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
 
+// Interface pour request avec user
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: number;
+  };
+}
+
 // Créer les dossiers d'upload s'ils n'existent pas
 const uploadDirs = ['uploads', 'uploads/documents', 'uploads/photos', 'uploads/kbis', 'uploads/assurances'];
 uploadDirs.forEach(dir => {
@@ -19,8 +26,8 @@ const ALLOWED_MIME_TYPES: Record<string, string[]> = {
   assurances: ['application/pdf', 'image/jpeg', 'image/png'],
 };
 
-// Taille max par type (en bytes)
-const MAX_FILE_SIZE: Record<string, number> = {
+// Taille max par type (en bytes) - exporté pour utilisation externe
+export const MAX_FILE_SIZE: Record<string, number> = {
   documents: 10 * 1024 * 1024, // 10MB
   photos: 5 * 1024 * 1024,     // 5MB
   kbis: 5 * 1024 * 1024,       // 5MB
@@ -45,7 +52,8 @@ const storage = multer.diskStorage({
   },
   filename: (req: Request, file: Express.Multer.File, cb) => {
     // Générer un nom unique : userId_timestamp_originalname
-    const userId = (req as any).user?.id || 'unknown';
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || 'unknown';
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     const baseName = path.basename(file.originalname, ext)
@@ -82,7 +90,7 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max par défaut
+    fileSize: MAX_FILE_SIZE.documents, // Utiliser la constante
     files: 5, // Max 5 fichiers par requête
   },
 });
