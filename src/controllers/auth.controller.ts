@@ -206,7 +206,7 @@ export const authController = {
         success: true,
         data: user,
       });
-    } catch (_error: unknown) {
+    } catch {
       return res.status(401).json({
         success: false,
         message: 'Token invalide.',
