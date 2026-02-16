@@ -463,8 +463,9 @@ export const authService = {
       throw new Error('USER_NOT_FOUND');
     }
 
-    // Ne pas renvoyer le mot de passe - utiliser _password pour indiquer intentionnellement inutilisé
-    const { password: _password, ...userWithoutPassword } = user;
+    // Ne pas renvoyer le mot de passe - extraire et ignorer
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   },
 
