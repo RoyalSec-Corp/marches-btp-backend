@@ -6,6 +6,7 @@ import appelOffreRoutes from './appelOffre.routes.js';
 import contratRoutes from './contrat.routes.js';
 import notificationRoutes from './notification.routes.js';
 import geocodingRoutes from './geocoding.routes.js';
+import paiementRoutes from './paiement.routes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.get('/health', (_req, res) => {
       contrats: '/api/contrats',
       notifications: '/api/notifications',
       geocoding: '/api/geocoding',
+      paiements: '/api/paiements',
     },
   });
 });
@@ -39,6 +41,7 @@ router.use('/entreprises', entrepriseRoutes);
 router.use('/appels-offres', appelOffreRoutes);
 router.use('/contrats', contratRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/paiements', paiementRoutes);
 
 // Routes utilitaires
 router.use('/geocoding', geocodingRoutes);
