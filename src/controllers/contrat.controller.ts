@@ -12,6 +12,22 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+interface ContratFilters {
+  statut?: ContratStatus;
+  entrepriseId?: number;
+  freelanceId?: number;
+  appelOffreId?: number;
+}
+
+interface UpdateContratData {
+  titre?: string;
+  description?: string;
+  montant?: number;
+  dateDebut?: Date;
+  dateFin?: Date;
+  progressStage?: string;
+}
+
 class ContratController {
   /**
    * Créer un nouveau contrat
@@ -44,13 +60,13 @@ class ContratController {
       const dateDebut = req.body.dateDebut || req.body.startDate || null;
       const dateFin = req.body.dateFin || req.body.endDate || null;
       
-      // Champs supplémentaires du frontend
-      const location = req.body.location || '';
-      const budgetUnit = req.body.budgetUnit || 'day';
-      const duration = req.body.duration ? parseInt(req.body.duration) : null;
-      const durationUnit = req.body.durationUnit || 'jours';
-      const requirements = req.body.requirements || '';
-      const skills = req.body.skills || [];
+      // Champs supplémentaires du frontend (pour référence future)
+      // const location = req.body.location || '';
+      // const budgetUnit = req.body.budgetUnit || 'day';
+      // const duration = req.body.duration ? parseInt(req.body.duration) : null;
+      // const durationUnit = req.body.durationUnit || 'jours';
+      // const requirements = req.body.requirements || '';
+      // const skills = req.body.skills || [];
 
       // Validation de base
       if (!titre.trim()) {
@@ -97,8 +113,6 @@ class ContratController {
             dateDebut: dateDebut ? new Date(dateDebut) : null,
             dateFin: dateFin ? new Date(dateFin) : null,
             statut: ContratStatus.BROUILLON,
-            // Stocker les infos supplémentaires dans la description
-            // ou utiliser des champs additionnels si disponibles
           },
           include: {
             entreprise: {
@@ -188,11 +202,19 @@ class ContratController {
     try {
       const { page = '1', limit = '10', statut, entrepriseId, freelanceId, appelOffreId } = req.query;
 
-      const filters: any = {};
-      if (statut) filters.statut = statut as ContratStatus;
-      if (entrepriseId) filters.entrepriseId = parseInt(entrepriseId as string);
-      if (freelanceId) filters.freelanceId = parseInt(freelanceId as string);
-      if (appelOffreId) filters.appelOffreId = parseInt(appelOffreId as string);
+      const filters: ContratFilters = {};
+      if (statut) {
+        filters.statut = statut as ContratStatus;
+      }
+      if (entrepriseId) {
+        filters.entrepriseId = parseInt(entrepriseId as string);
+      }
+      if (freelanceId) {
+        filters.freelanceId = parseInt(freelanceId as string);
+      }
+      if (appelOffreId) {
+        filters.appelOffreId = parseInt(appelOffreId as string);
+      }
 
       const result = await contratService.list(
         filters,
@@ -257,13 +279,25 @@ class ContratController {
       const { id } = req.params;
       const { titre, description, montant, dateDebut, dateFin, progressStage } = req.body;
 
-      const updateData: any = {};
-      if (titre) updateData.titre = titre;
-      if (description !== undefined) updateData.description = description;
-      if (montant) updateData.montant = parseFloat(montant);
-      if (dateDebut) updateData.dateDebut = new Date(dateDebut);
-      if (dateFin) updateData.dateFin = new Date(dateFin);
-      if (progressStage) updateData.progressStage = progressStage;
+      const updateData: UpdateContratData = {};
+      if (titre) {
+        updateData.titre = titre;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      if (montant) {
+        updateData.montant = parseFloat(montant);
+      }
+      if (dateDebut) {
+        updateData.dateDebut = new Date(dateDebut);
+      }
+      if (dateFin) {
+        updateData.dateFin = new Date(dateFin);
+      }
+      if (progressStage) {
+        updateData.progressStage = progressStage;
+      }
 
       const contrat = await contratService.update(parseInt(id), updateData);
 
