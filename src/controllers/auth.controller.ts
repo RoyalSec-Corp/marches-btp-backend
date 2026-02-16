@@ -8,6 +8,10 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+interface ErrorWithName extends Error {
+  name: string;
+}
+
 export const authController = {
   // POST /api/auth/register/freelance
   registerFreelance: async (req: Request, res: Response, _next: NextFunction) => {
@@ -137,7 +141,7 @@ export const authController = {
         data: tokens,
       });
     } catch (error: unknown) {
-      const err = error as Error & { name?: string };
+      const err = error as ErrorWithName;
       if (err.message === 'SESSION_EXPIRED' || err.name === 'JsonWebTokenError') {
         return res.status(401).json({
           success: false,
@@ -202,7 +206,7 @@ export const authController = {
         success: true,
         data: user,
       });
-    } catch (_error) {
+    } catch (_error: unknown) {
       return res.status(401).json({
         success: false,
         message: 'Token invalide.',
