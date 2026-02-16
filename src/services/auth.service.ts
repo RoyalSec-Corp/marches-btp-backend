@@ -67,13 +67,17 @@ const cleanSiret = (siret: string | undefined): string => {
 };
 
 const cleanPhone = (phone: string | undefined): string | undefined => {
-  if (!phone) return undefined;
+  if (!phone) {
+    return undefined;
+  }
   const cleaned = phone.replace(/\s/g, '');
   return cleaned || undefined;
 };
 
 const cleanPostalCode = (code: string | undefined): string | undefined => {
-  if (!code) return undefined;
+  if (!code) {
+    return undefined;
+  }
   const cleaned = code.replace(/\D/g, '');
   return cleaned || undefined;
 };
@@ -459,8 +463,8 @@ export const authService = {
       throw new Error('USER_NOT_FOUND');
     }
 
-    // Ne pas renvoyer le mot de passe
-    const { password, ...userWithoutPassword } = user;
+    // Ne pas renvoyer le mot de passe - utiliser _password pour indiquer intentionnellement inutilisé
+    const { password: _password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   },
 
