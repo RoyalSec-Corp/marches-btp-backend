@@ -70,12 +70,13 @@ class EntrepriseController {
         message: 'Profil mis à jour avec succès',
         data: updated,
       });
-    } catch (error: any) {
-      if (error.message === 'Profil entreprise non trouvé') {
-        return res.status(404).json({ success: false, message: error.message });
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.message === 'Profil entreprise non trouvé') {
+        return res.status(404).json({ success: false, message: err.message });
       }
-      if (error.message.includes('SIRET')) {
-        return res.status(400).json({ success: false, message: error.message });
+      if (err.message?.includes('SIRET')) {
+        return res.status(400).json({ success: false, message: err.message });
       }
       next(error);
     }
