@@ -20,6 +20,24 @@ export interface AddressInput {
   pays?: string;
 }
 
+interface GeocodingFeature {
+  geometry: {
+    coordinates: [number, number];
+  };
+  properties: {
+    label?: string;
+    city?: string;
+    name?: string;
+    postcode?: string;
+    context?: string;
+    score?: number;
+  };
+}
+
+interface GeocodingApiResponse {
+  features: GeocodingFeature[];
+}
+
 class GeocodingService {
   private readonly API_URL = 'https://api-adresse.data.gouv.fr';
 
@@ -30,9 +48,15 @@ class GeocodingService {
     try {
       // Construire la requête d'adresse
       const queryParts: string[] = [];
-      if (input.adresse) queryParts.push(input.adresse);
-      if (input.codePostal) queryParts.push(input.codePostal);
-      if (input.ville) queryParts.push(input.ville);
+      if (input.adresse) {
+        queryParts.push(input.adresse);
+      }
+      if (input.codePostal) {
+        queryParts.push(input.codePostal);
+      }
+      if (input.ville) {
+        queryParts.push(input.ville);
+      }
 
       if (queryParts.length === 0) {
         console.warn('Geocoding: Aucune adresse fournie');
@@ -49,7 +73,7 @@ class GeocodingService {
         return null;
       }
 
-      const data = await response.json();
+      const data: GeocodingApiResponse = await response.json();
 
       if (!data.features || data.features.length === 0) {
         console.warn(`Geocoding: Aucun résultat pour "${query}"`);
@@ -92,7 +116,7 @@ class GeocodingService {
         return null;
       }
 
-      const data = await response.json();
+      const data: GeocodingApiResponse = await response.json();
 
       if (!data.features || data.features.length === 0) {
         return null;
@@ -105,8 +129,8 @@ class GeocodingService {
       return {
         latitude,
         longitude,
-        formattedAddress: props.label,
-        city: props.city || props.name,
+        formattedAddress: props.label || '',
+        city: props.city || props.name || '',
         postcode: props.postcode || codePostal,
         context: props.context || '',
         score: props.score || 0,
@@ -130,7 +154,7 @@ class GeocodingService {
         return null;
       }
 
-      const data = await response.json();
+      const data: GeocodingApiResponse = await response.json();
 
       if (!data.features || data.features.length === 0) {
         return null;
@@ -142,9 +166,9 @@ class GeocodingService {
       return {
         latitude,
         longitude,
-        formattedAddress: props.label,
-        city: props.city,
-        postcode: props.postcode,
+        formattedAddress: props.label || '',
+        city: props.city || '',
+        postcode: props.postcode || '',
         context: props.context || '',
         score: props.score || 0,
       };
@@ -191,20 +215,20 @@ class GeocodingService {
         return [];
       }
 
-      const data = await response.json();
+      const data: GeocodingApiResponse = await response.json();
 
       if (!data.features) {
         return [];
       }
 
-      return data.features.map((feature: any) => {
+      return data.features.map((feature: GeocodingFeature) => {
         const [longitude, latitude] = feature.geometry.coordinates;
         const props = feature.properties;
 
         return {
           latitude,
           longitude,
-          formattedAddress: props.label,
+          formattedAddress: props.label || '',
           city: props.city || '',
           postcode: props.postcode || '',
           context: props.context || '',
