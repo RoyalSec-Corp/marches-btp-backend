@@ -1,4 +1,4 @@
-import { PrismaClient, NotificationType, Prisma } from '@prisma/client';
+import { PrismaClient, NotificationType, Prisma, Notification } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -19,11 +19,29 @@ export interface NotificationFilters {
   dateTo?: Date;
 }
 
+type NotificationWithContrat = Prisma.NotificationGetPayload<{
+  include: { contrat: true };
+}>;
+
+type NotificationWithRelations = Prisma.NotificationGetPayload<{
+  include: { contrat: true; destinataire: true };
+}>;
+
+interface NotificationListResult {
+  data: Prisma.NotificationGetPayload<{
+    include: { contrat: { select: { id: true; titre: true; statut: true } } };
+  }>[];
+  total: number;
+  unreadCount: number;
+  page: number;
+  totalPages: number;
+}
+
 class NotificationService {
   /**
    * Créer une notification
    */
-  async create(data: CreateNotificationInput): Promise<any> {
+  async create(data: CreateNotificationInput): Promise<NotificationWithContrat> {
     return prisma.notification.create({
       data: {
         destinataireId: data.destinataireId,
@@ -59,13 +77,7 @@ class NotificationService {
   /**
    * Récupérer les notifications d'un utilisateur
    */
-  async listByUser(userId: number, page: number = 1, limit: number = 20): Promise<{
-    data: any[];
-    total: number;
-    unreadCount: number;
-    page: number;
-    totalPages: number;
-  }> {
+  async listByUser(userId: number, page: number = 1, limit: number = 20): Promise<NotificationListResult> {
     const where: Prisma.NotificationWhereInput = {
       destinataireId: userId,
     };
@@ -98,7 +110,7 @@ class NotificationService {
   /**
    * Récupérer une notification par ID
    */
-  async findById(id: number): Promise<any> {
+  async findById(id: number): Promise<NotificationWithRelations> {
     const notification = await prisma.notification.findUnique({
       where: { id },
       include: {
@@ -131,7 +143,7 @@ class NotificationService {
   /**
    * Marquer une notification comme lue
    */
-  async markAsRead(id: number, userId: number): Promise<any> {
+  async markAsRead(id: number, userId: number): Promise<Notification> {
     const notification = await prisma.notification.findUnique({
       where: { id },
     });
@@ -205,7 +217,7 @@ class NotificationService {
   /**
    * Notification de nouvelle candidature
    */
-  async notifyNewCandidature(publisherId: number, appelOffreTitle: string, candidatName: string): Promise<any> {
+  async notifyNewCandidature(publisherId: number, appelOffreTitle: string, candidatName: string): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: publisherId,
       destinataireType: 'APPEL_OFFRE',
@@ -218,7 +230,7 @@ class NotificationService {
   /**
    * Notification de candidature acceptée/refusée
    */
-  async notifyCandidatureStatus(candidatId: number, appelOffreTitle: string, accepted: boolean): Promise<any> {
+  async notifyCandidatureStatus(candidatId: number, appelOffreTitle: string, accepted: boolean): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: candidatId,
       destinataireType: 'FREELANCE',
@@ -233,7 +245,7 @@ class NotificationService {
   /**
    * Notification de nouveau contrat
    */
-  async notifyNewContrat(userId: number, userType: string, contratId: number, contratTitle: string): Promise<any> {
+  async notifyNewContrat(userId: number, userType: string, contratId: number, contratTitle: string): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
@@ -247,7 +259,7 @@ class NotificationService {
   /**
    * Notification de contrat signé
    */
-  async notifyContratSigned(userId: number, userType: string, contratId: number, contratTitle: string, bothSigned: boolean): Promise<any> {
+  async notifyContratSigned(userId: number, userType: string, contratId: number, contratTitle: string, bothSigned: boolean): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
@@ -263,7 +275,7 @@ class NotificationService {
   /**
    * Notification de nouveau message
    */
-  async notifyNewMessage(userId: number, userType: string, senderName: string, contratId?: number): Promise<any> {
+  async notifyNewMessage(userId: number, userType: string, senderName: string, contratId?: number): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
@@ -277,7 +289,7 @@ class NotificationService {
   /**
    * Notification système
    */
-  async notifySystem(userId: number, userType: string, titre: string, message: string): Promise<any> {
+  async notifySystem(userId: number, userType: string, titre: string, message: string): Promise<NotificationWithContrat> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
