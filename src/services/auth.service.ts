@@ -30,7 +30,7 @@ export interface RegisterEntrepriseDTO {
   codePostal?: string;
   representantLegal: string;
   formeJuridique?: string;
-  secteurActivite?: string;
+  nafCode?: string;
   nom?: string;
   prenom?: string;
 }
@@ -259,6 +259,7 @@ export const authService = {
     });
 
     // Creer l'utilisateur et le profil entreprise
+    // Note: Le schéma Entreprise n'a pas de champ secteurActivite, seulement nafCode
     const user = await prisma.user.create({
       data: {
         email: data.email,
@@ -282,7 +283,7 @@ export const authService = {
             codePostal: cleanPostalCode(data.codePostal),
             representantLegal: data.representantLegal,
             formeJuridique: data.formeJuridique,
-            secteurActivite: data.secteurActivite || 'BTP',
+            nafCode: data.nafCode,
             statutCompte: StatutCompte.EN_ATTENTE,
           },
         },
