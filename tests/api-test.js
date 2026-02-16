@@ -1,3 +1,4 @@
+/* eslint-env node */
 /**
  * Script de test API MarchesBTP
  * Usage: API_URL=http://localhost:3002 node tests/api-test.js
@@ -213,7 +214,9 @@ async function runTests() {
   log.section('AUTHENTIFICATION - PROFIL');
 
   await test('GET /api/auth/profile - Récupérer profil (authentifié)', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/auth/profile', null, state.freelanceToken);
     return res.ok;
   });
@@ -232,13 +235,17 @@ async function runTests() {
   });
 
   await test('GET /api/freelances/profile - Mon profil freelance', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/freelances/profile', null, state.freelanceToken);
     return res.ok;
   });
 
   await test('PUT /api/freelances/profile - Modifier profil freelance', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('PUT', '/api/freelances/profile', {
       metier: 'Plombier',
       experience: 8,
@@ -248,7 +255,9 @@ async function runTests() {
   });
 
   await test('GET /api/freelances/documents - Mes documents (authentifié)', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/freelances/documents', null, state.freelanceToken);
     return res.ok;
   });
@@ -262,13 +271,17 @@ async function runTests() {
   });
 
   await test('GET /api/entreprises/profile - Mon profil entreprise', async () => {
-    if (!state.entrepriseToken) return 'skip';
+    if (!state.entrepriseToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/entreprises/profile', null, state.entrepriseToken);
     return res.ok;
   });
 
   await test('GET /api/entreprises/documents - Mes documents (authentifié)', async () => {
-    if (!state.entrepriseToken) return 'skip';
+    if (!state.entrepriseToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/entreprises/documents', null, state.entrepriseToken);
     return res.ok;
   });
@@ -312,19 +325,25 @@ async function runTests() {
   log.section('CONTRATS');
 
   await test('GET /api/contrats - Liste contrats', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/contrats', null, state.freelanceToken);
     return res.ok;
   });
 
   await test('GET /api/contrats/stats - Statistiques contrats', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/contrats/stats', null, state.freelanceToken);
     return res.ok;
   });
 
   await test('GET /api/contrats/me - Mes contrats', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/contrats/me', null, state.freelanceToken);
     return res.ok;
   });
@@ -333,19 +352,25 @@ async function runTests() {
   log.section('NOTIFICATIONS');
 
   await test('GET /api/notifications - Liste notifications', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/notifications', null, state.freelanceToken);
     return res.ok;
   });
 
   await test('GET /api/notifications/unread-count - Compter non lues', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('GET', '/api/notifications/unread-count', null, state.freelanceToken);
     return res.ok;
   });
 
   await test('PUT /api/notifications/read-all - Marquer tout comme lu', async () => {
-    if (!state.freelanceToken) return 'skip';
+    if (!state.freelanceToken) {
+      return 'skip';
+    }
     const res = await request('PUT', '/api/notifications/read-all', {}, state.freelanceToken);
     return res.ok;
   });
