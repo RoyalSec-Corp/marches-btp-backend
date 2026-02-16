@@ -59,7 +59,7 @@ export const authenticate = async (
         userType: payload.userType,
       };
       next();
-    } catch (_tokenError) {
+    } catch {
       return res.status(401).json({
         success: false,
         message: 'Token invalide ou expire.',
@@ -93,7 +93,7 @@ export const optionalAuth = async (
           email: payload.email,
           userType: payload.userType,
         };
-      } catch (_tokenError) {
+      } catch {
         // Token invalide, on continue sans user
       }
     }
