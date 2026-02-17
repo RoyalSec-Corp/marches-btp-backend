@@ -42,15 +42,12 @@ export interface ApplyData {
 // ============================================
 
 class AppelOffreService {
-
   /**
    * Trouver tous les AO appartenant à un userId
    * Cherche par publisherId OU par entrepriseId (fallback pour anciens AO)
    */
   private async buildOwnerFilter(userId: number): Promise<Prisma.AppelOffreWhereInput> {
-    const conditions: Prisma.AppelOffreWhereInput[] = [
-      { publisherId: userId },
-    ];
+    const conditions: Prisma.AppelOffreWhereInput[] = [{ publisherId: userId }];
 
     // Fallback: chercher aussi par entrepriseId pour les anciens AO sans publisherId
     const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
@@ -129,23 +126,20 @@ class AppelOffreService {
     }
     if (filters.mots_cles && filters.mots_cles.length > 0) {
       // Si on a déjà un OR du ownerFilter, on doit combiner avec AND
-      const motsClesFilter = filters.mots_cles.map(mot => ({
+      const motsClesFilter = filters.mots_cles.map((mot) => ({
         OR: [
           { titre: { contains: mot, mode: 'insensitive' as const } },
           { description: { contains: mot, mode: 'insensitive' as const } },
         ],
       }));
-      
+
       if (where.OR) {
         // Combiner ownerFilter OR avec mots_cles
         const ownerOR = where.OR;
         delete where.OR;
-        where.AND = [
-          { OR: ownerOR as Prisma.AppelOffreWhereInput[] },
-          ...motsClesFilter,
-        ];
+        where.AND = [{ OR: ownerOR as Prisma.AppelOffreWhereInput[] }, ...motsClesFilter];
       } else {
-        where.OR = filters.mots_cles.map(mot => ({
+        where.OR = filters.mots_cles.map((mot) => ({
           OR: [
             { titre: { contains: mot, mode: 'insensitive' as const } },
             { description: { contains: mot, mode: 'insensitive' as const } },
@@ -168,7 +162,7 @@ class AppelOffreService {
       }),
     ]);
 
-    const calls_for_tenders = appels.map(a => ({
+    const calls_for_tenders = appels.map((a) => ({
       id: a.id,
       titre: a.titre,
       description: a.description,
@@ -178,7 +172,14 @@ class AppelOffreService {
       secteur: a.secteur,
       cible: a.cible,
       type_personne: a.typePersonne,
-      statut: a.statutCompte === 'PUBLIE' ? 'published' : a.statutCompte === 'CLOTURE' ? 'closed' : a.statutCompte === 'BROUILLON' ? 'draft' : 'cancelled',
+      statut:
+        a.statutCompte === 'PUBLIE'
+          ? 'published'
+          : a.statutCompte === 'CLOTURE'
+            ? 'closed'
+            : a.statutCompte === 'BROUILLON'
+              ? 'draft'
+              : 'cancelled',
       date_limite: a.dateLimite,
       created_at: a.dateCreation,
       company_name: a.entreprise?.raisonSociale || null,
@@ -217,7 +218,9 @@ class AppelOffreService {
       },
     });
 
-    if (!appel) return null;
+    if (!appel) {
+      return null;
+    }
 
     return {
       id: appel.id,
@@ -266,7 +269,7 @@ class AppelOffreService {
 
     // Grouper par mois
     const monthlyMap = new Map<string, { calls_created: number; applications_received: number }>();
-    
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
@@ -302,8 +305,8 @@ class AppelOffreService {
       { range: '> 100 000 \u20ac', min: 100000, max: Infinity },
     ];
 
-    const budget_distribution = budgetRanges.map(range => {
-      const count = allAppels.filter(a => {
+    const budget_distribution = budgetRanges.map((range) => {
+      const count = allAppels.filter((a) => {
         const val = parseFloat((a.budget || '0').replace(/[^\d.,]/g, '').replace(',', '.'));
         return val >= range.min && val < range.max;
       }).length;
@@ -311,9 +314,9 @@ class AppelOffreService {
     });
 
     // Compteurs — utiliser les IDs trouvés
-    const userAppelIds = appels.map(a => a.id);
-    const appelsActifs = await prisma.appelOffre.count({ 
-      where: { statutCompte: 'PUBLIE', ...userFilter } 
+    const userAppelIds = appels.map((a) => a.id);
+    const appelsActifs = await prisma.appelOffre.count({
+      where: { statutCompte: 'PUBLIE', ...userFilter },
     });
     const totalAppels = await prisma.appelOffre.count({ where: userFilter });
 
@@ -353,18 +356,24 @@ class AppelOffreService {
    */
   async apply(appelOffreId: number, userId: number, data: ApplyData) {
     const appel = await prisma.appelOffre.findUnique({ where: { id: appelOffreId } });
-    if (!appel) throw new Error('Appel d\'offre non trouvé');
+    if (!appel) {
+      throw new Error("Appel d'offre non trouvé");
+    }
 
     let freelanceId: number | null = null;
     let entrepriseId: number | null = null;
 
     if (data.typeCandidat === 'FREELANCE') {
       const freelance = await prisma.freelance.findUnique({ where: { userId } });
-      if (!freelance) throw new Error('Profil freelance non trouvé');
+      if (!freelance) {
+        throw new Error('Profil freelance non trouvé');
+      }
       freelanceId = freelance.id;
     } else {
       const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
-      if (!entreprise) throw new Error('Profil entreprise non trouvé');
+      if (!entreprise) {
+        throw new Error('Profil entreprise non trouvé');
+      }
       entrepriseId = entreprise.id;
     }
 
@@ -417,7 +426,7 @@ class AppelOffreService {
       orderBy: { datePostulation: 'desc' },
     });
 
-    return candidatures.map(c => ({
+    return candidatures.map((c) => ({
       id: c.id,
       appel_offre_id: c.appelOffreId,
       type_candidat: c.typeCandidat,

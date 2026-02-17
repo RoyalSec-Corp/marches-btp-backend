@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { authController } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.middleware.js';
-import { validateRegisterFreelance, validateRegisterEntreprise, validateLogin } from '../validators/auth.validator.js';
+import {
+  validateRegisterFreelance,
+  validateRegisterEntreprise,
+  validateLogin,
+} from '../validators/auth.validator.js';
 
 const router = Router();
 
@@ -10,21 +14,25 @@ const router = Router();
  * @desc    Inscription d'un freelance
  * @access  Public
  */
-router.post('/register/freelance', validateRegisterFreelance, authController.registerFreelance);
+router.post('/register/freelance', ...validateRegisterFreelance, authController.registerFreelance);
 
 /**
  * @route   POST /api/auth/register/entreprise
  * @desc    Inscription d'une entreprise
  * @access  Public
  */
-router.post('/register/entreprise', validateRegisterEntreprise, authController.registerEntreprise);
+router.post(
+  '/register/entreprise',
+  ...validateRegisterEntreprise,
+  authController.registerEntreprise
+);
 
 /**
  * @route   POST /api/auth/login
  * @desc    Connexion utilisateur
  * @access  Public
  */
-router.post('/login', validateLogin, authController.login);
+router.post('/login', ...validateLogin, authController.login);
 
 /**
  * @route   POST /api/auth/logout

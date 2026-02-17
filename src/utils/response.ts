@@ -56,7 +56,11 @@ export function sendPaginated<T>(
 }
 
 // Réponse de création
-export function sendCreated<T>(res: Response, data: T, message: string = 'Ressource créée'): Response {
+export function sendCreated<T>(
+  res: Response,
+  data: T,
+  message: string = 'Ressource créée'
+): Response {
   return sendSuccess(res, data, message, 201);
 }
 

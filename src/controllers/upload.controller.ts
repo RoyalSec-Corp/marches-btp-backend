@@ -23,7 +23,7 @@ class UploadController {
       }
 
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-      
+
       if (!files || Object.keys(files).length === 0) {
         res.status(400).json({ error: 'Aucun fichier fourni' });
         return;
@@ -47,10 +47,10 @@ class UploadController {
       });
     } catch (error) {
       console.error('Erreur upload documents freelance:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: 'Erreur lors de l\'upload des documents',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        error: "Erreur lors de l'upload des documents",
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }
@@ -68,7 +68,7 @@ class UploadController {
       }
 
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-      
+
       if (!files || Object.keys(files).length === 0) {
         res.status(400).json({ error: 'Aucun fichier fourni' });
         return;
@@ -89,10 +89,10 @@ class UploadController {
       });
     } catch (error) {
       console.error('Erreur upload documents entreprise:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: 'Erreur lors de l\'upload des documents',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        error: "Erreur lors de l'upload des documents",
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }
@@ -123,10 +123,10 @@ class UploadController {
       });
     } catch (error) {
       console.error('Erreur suppression document freelance:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: 'Erreur lors de la suppression du document',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }
@@ -157,10 +157,10 @@ class UploadController {
       });
     } catch (error) {
       console.error('Erreur suppression document entreprise:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: 'Erreur lors de la suppression du document',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }
@@ -179,15 +179,15 @@ class UploadController {
 
       const documents = await uploadService.getFreelanceDocuments(userId);
 
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
-        documents 
+        documents,
       });
     } catch (error) {
       console.error('Erreur récupération documents freelance:', error);
       // Si freelance non trouvé, retourner documents vides au lieu d'erreur
       if (error instanceof Error && error.message.includes('non trouvé')) {
-        res.status(200).json({ 
+        res.status(200).json({
           success: true,
           documents: {
             photo: null,
@@ -195,14 +195,14 @@ class UploadController {
             assurance: null,
             cv: null,
             certifications: null,
-          }
+          },
         });
         return;
       }
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération des documents',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }
@@ -221,28 +221,28 @@ class UploadController {
 
       const documents = await uploadService.getEntrepriseDocuments(userId);
 
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
-        documents 
+        documents,
       });
     } catch (error) {
       console.error('Erreur récupération documents entreprise:', error);
       // Si entreprise non trouvée, retourner documents vides au lieu d'erreur
       if (error instanceof Error && error.message.includes('non trouvé')) {
-        res.status(200).json({ 
+        res.status(200).json({
           success: true,
           documents: {
             logo: null,
             kbis: null,
             assurance: null,
-          }
+          },
         });
         return;
       }
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: 'Erreur lors de la récupération des documents',
-        details: error instanceof Error ? error.message : 'Erreur inconnue'
+        details: error instanceof Error ? error.message : 'Erreur inconnue',
       });
     }
   }

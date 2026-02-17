@@ -47,7 +47,7 @@ export type Env = z.infer<typeof envSchema>;
 // Valider et exporter la configuration
 const parseEnv = (): Env => {
   const result = envSchema.safeParse(process.env);
-  
+
   if (!result.success) {
     const errors = result.error.issues
       .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)
@@ -55,7 +55,7 @@ const parseEnv = (): Env => {
     console.error('❌ Configuration invalide:\n' + errors);
     process.exit(1);
   }
-  
+
   return result.data;
 };
 

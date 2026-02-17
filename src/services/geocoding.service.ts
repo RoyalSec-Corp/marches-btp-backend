@@ -30,9 +30,15 @@ class GeocodingService {
     try {
       // Construire la requête d'adresse
       const queryParts: string[] = [];
-      if (input.adresse) queryParts.push(input.adresse);
-      if (input.codePostal) queryParts.push(input.codePostal);
-      if (input.ville) queryParts.push(input.ville);
+      if (input.adresse) {
+        queryParts.push(input.adresse);
+      }
+      if (input.codePostal) {
+        queryParts.push(input.codePostal);
+      }
+      if (input.ville) {
+        queryParts.push(input.ville);
+      }
 
       if (queryParts.length === 0) {
         console.warn('Geocoding: Aucune adresse fournie');
@@ -43,7 +49,7 @@ class GeocodingService {
       const url = `${this.API_URL}/search/?q=${encodeURIComponent(query)}&limit=1`;
 
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         console.error(`Geocoding API error: ${response.status} ${response.statusText}`);
         return null;
@@ -87,7 +93,7 @@ class GeocodingService {
       url += '&type=municipality&limit=1';
 
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         return null;
       }
@@ -125,7 +131,7 @@ class GeocodingService {
       const url = `${this.API_URL}/reverse/?lon=${longitude}&lat=${latitude}`;
 
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         return null;
       }
@@ -164,8 +170,10 @@ class GeocodingService {
     const dLon = this.toRad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(this.toRad(lat1)) *
+        Math.cos(this.toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -186,7 +194,7 @@ class GeocodingService {
       const url = `${this.API_URL}/search/?q=${encodeURIComponent(query)}&limit=${limit}&autocomplete=1`;
 
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         return [];
       }

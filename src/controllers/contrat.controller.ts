@@ -23,23 +23,35 @@ class ContratController {
         return;
       }
 
-      const { titre, description, montant, entrepriseId, freelanceId, appelOffreId, dateDebut, dateFin } = req.body;
+      const {
+        titre,
+        description,
+        montant,
+        entrepriseId,
+        freelanceId,
+        appelOffreId,
+        dateDebut,
+        dateFin,
+      } = req.body;
 
       if (!titre || !montant || !entrepriseId || !freelanceId) {
         res.status(400).json({ error: 'Champs requis: titre, montant, entrepriseId, freelanceId' });
         return;
       }
 
-      const contrat = await contratService.create({
-        titre,
-        description,
-        montant: parseFloat(montant),
-        entrepriseId: parseInt(entrepriseId),
-        freelanceId: parseInt(freelanceId),
-        appelOffreId: appelOffreId ? parseInt(appelOffreId) : undefined,
-        dateDebut: dateDebut ? new Date(dateDebut) : undefined,
-        dateFin: dateFin ? new Date(dateFin) : undefined,
-      }, userId);
+      const contrat = await contratService.create(
+        {
+          titre,
+          description,
+          montant: parseFloat(montant),
+          entrepriseId: parseInt(entrepriseId),
+          freelanceId: parseInt(freelanceId),
+          appelOffreId: appelOffreId ? parseInt(appelOffreId) : undefined,
+          dateDebut: dateDebut ? new Date(dateDebut) : undefined,
+          dateFin: dateFin ? new Date(dateFin) : undefined,
+        },
+        userId
+      );
 
       res.status(201).json({
         message: 'Contrat créé avec succès',
@@ -77,13 +89,28 @@ class ContratController {
    */
   async list(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { page = '1', limit = '10', statut, entrepriseId, freelanceId, appelOffreId } = req.query;
+      const {
+        page = '1',
+        limit = '10',
+        statut,
+        entrepriseId,
+        freelanceId,
+        appelOffreId,
+      } = req.query;
 
       const filters: any = {};
-      if (statut) filters.statut = statut as ContratStatus;
-      if (entrepriseId) filters.entrepriseId = parseInt(entrepriseId as string);
-      if (freelanceId) filters.freelanceId = parseInt(freelanceId as string);
-      if (appelOffreId) filters.appelOffreId = parseInt(appelOffreId as string);
+      if (statut) {
+        filters.statut = statut as ContratStatus;
+      }
+      if (entrepriseId) {
+        filters.entrepriseId = parseInt(entrepriseId as string);
+      }
+      if (freelanceId) {
+        filters.freelanceId = parseInt(freelanceId as string);
+      }
+      if (appelOffreId) {
+        filters.appelOffreId = parseInt(appelOffreId as string);
+      }
 
       const result = await contratService.list(
         filters,
@@ -116,7 +143,7 @@ class ContratController {
       }
 
       if (userType !== 'FREELANCE' && userType !== 'ENTREPRISE') {
-        res.status(403).json({ error: 'Type d\'utilisateur non autorisé' });
+        res.status(403).json({ error: "Type d'utilisateur non autorisé" });
         return;
       }
 
@@ -149,12 +176,24 @@ class ContratController {
       const { titre, description, montant, dateDebut, dateFin, progressStage } = req.body;
 
       const updateData: any = {};
-      if (titre) updateData.titre = titre;
-      if (description !== undefined) updateData.description = description;
-      if (montant) updateData.montant = parseFloat(montant);
-      if (dateDebut) updateData.dateDebut = new Date(dateDebut);
-      if (dateFin) updateData.dateFin = new Date(dateFin);
-      if (progressStage) updateData.progressStage = progressStage;
+      if (titre) {
+        updateData.titre = titre;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      if (montant) {
+        updateData.montant = parseFloat(montant);
+      }
+      if (dateDebut) {
+        updateData.dateDebut = new Date(dateDebut);
+      }
+      if (dateFin) {
+        updateData.dateFin = new Date(dateFin);
+      }
+      if (progressStage) {
+        updateData.progressStage = progressStage;
+      }
 
       const contrat = await contratService.update(parseInt(id), updateData);
 
@@ -186,7 +225,7 @@ class ContratController {
     } catch (error) {
       console.error('Erreur envoi signature:', error);
       res.status(400).json({
-        error: error instanceof Error ? error.message : 'Erreur lors de l\'envoi',
+        error: error instanceof Error ? error.message : "Erreur lors de l'envoi",
       });
     }
   }
@@ -214,9 +253,9 @@ class ContratController {
       const contrat = await contratService.sign(parseInt(id), userId, signatureData);
 
       res.status(200).json({
-        message: contrat.bothPartiesSigned 
-          ? 'Contrat signé par les deux parties' 
-          : 'Signature enregistrée, en attente de l\'autre partie',
+        message: contrat.bothPartiesSigned
+          ? 'Contrat signé par les deux parties'
+          : "Signature enregistrée, en attente de l'autre partie",
         contrat,
       });
     } catch (error) {
@@ -287,7 +326,7 @@ class ContratController {
     } catch (error) {
       console.error('Erreur annulation contrat:', error);
       res.status(400).json({
-        error: error instanceof Error ? error.message : 'Erreur lors de l\'annulation',
+        error: error instanceof Error ? error.message : "Erreur lors de l'annulation",
       });
     }
   }

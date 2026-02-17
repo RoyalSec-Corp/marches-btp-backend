@@ -115,7 +115,8 @@ export const ERROR_MESSAGES = {
   REQUIRED_FIELD: 'Ce champ est requis',
   INVALID_EMAIL: 'Adresse email invalide',
   INVALID_SIRET: 'Numéro SIRET invalide (14 chiffres)',
-  INVALID_PASSWORD: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre',
+  INVALID_PASSWORD:
+    'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre',
 
   // Ressources
   NOT_FOUND: 'Ressource non trouvée',

@@ -53,18 +53,29 @@ class EntrepriseService {
   /**
    * Lister toutes les entreprises (avec pagination)
    */
-  async findAll(options: {
-    page?: number;
-    limit?: number;
-    ville?: string;
-    formeJuridique?: string;
-  } = {}): Promise<{ entreprises: EntrepriseWithUser[]; total: number; page: number; totalPages: number }> {
+  async findAll(
+    options: {
+      page?: number;
+      limit?: number;
+      ville?: string;
+      formeJuridique?: string;
+    } = {}
+  ): Promise<{
+    entreprises: EntrepriseWithUser[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const { page = 1, limit = 10, ville, formeJuridique } = options;
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (ville) where.ville = { contains: ville, mode: 'insensitive' };
-    if (formeJuridique) where.formeJuridique = formeJuridique;
+    if (ville) {
+      where.ville = { contains: ville, mode: 'insensitive' };
+    }
+    if (formeJuridique) {
+      where.formeJuridique = formeJuridique;
+    }
 
     const [entreprises, total] = await Promise.all([
       prisma.entreprise.findMany({
@@ -113,16 +124,36 @@ class EntrepriseService {
 
     // Construire les données de mise à jour (uniquement les champs définis)
     const updateData: any = {};
-    if (data.raisonSociale !== undefined) updateData.raisonSociale = data.raisonSociale;
-    if (data.siret !== undefined) updateData.siret = data.siret;
-    if (data.representantLegal !== undefined) updateData.representantLegal = data.representantLegal;
-    if (data.telephone !== undefined) updateData.telephone = data.telephone;
-    if (data.adresse !== undefined) updateData.adresse = data.adresse;
-    if (data.ville !== undefined) updateData.ville = data.ville;
-    if (data.codePostal !== undefined) updateData.codePostal = data.codePostal;
-    if (data.formeJuridique !== undefined) updateData.formeJuridique = data.formeJuridique;
-    if (data.siteWeb !== undefined) updateData.siteWeb = data.siteWeb;
-    if (data.description !== undefined) updateData.description = data.description;
+    if (data.raisonSociale !== undefined) {
+      updateData.raisonSociale = data.raisonSociale;
+    }
+    if (data.siret !== undefined) {
+      updateData.siret = data.siret;
+    }
+    if (data.representantLegal !== undefined) {
+      updateData.representantLegal = data.representantLegal;
+    }
+    if (data.telephone !== undefined) {
+      updateData.telephone = data.telephone;
+    }
+    if (data.adresse !== undefined) {
+      updateData.adresse = data.adresse;
+    }
+    if (data.ville !== undefined) {
+      updateData.ville = data.ville;
+    }
+    if (data.codePostal !== undefined) {
+      updateData.codePostal = data.codePostal;
+    }
+    if (data.formeJuridique !== undefined) {
+      updateData.formeJuridique = data.formeJuridique;
+    }
+    if (data.siteWeb !== undefined) {
+      updateData.siteWeb = data.siteWeb;
+    }
+    if (data.description !== undefined) {
+      updateData.description = data.description;
+    }
 
     // Mettre à jour l'entreprise
     const updated = await prisma.entreprise.update({
@@ -137,7 +168,10 @@ class EntrepriseService {
   /**
    * Rechercher des entreprises par critères
    */
-  async search(query: string, options: { page?: number; limit?: number } = {}): Promise<{
+  async search(
+    query: string,
+    options: { page?: number; limit?: number } = {}
+  ): Promise<{
     entreprises: EntrepriseWithUser[];
     total: number;
   }> {

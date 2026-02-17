@@ -97,7 +97,9 @@ class FreelanceController {
 
       const { disponible } = req.body;
       if (typeof disponible !== 'boolean') {
-        return res.status(400).json({ success: false, message: 'Le champ disponible doit être un booléen' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'Le champ disponible doit être un booléen' });
       }
 
       const updated = await freelanceService.updateDisponibilite(userId, disponible);
@@ -122,7 +124,12 @@ class FreelanceController {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
       const metier = req.query.metier as string;
       const ville = req.query.ville as string;
-      const disponible = req.query.disponible === 'true' ? true : req.query.disponible === 'false' ? false : undefined;
+      const disponible =
+        req.query.disponible === 'true'
+          ? true
+          : req.query.disponible === 'false'
+            ? false
+            : undefined;
 
       const result = await freelanceService.findAll({ page, limit, metier, ville, disponible });
 
@@ -171,7 +178,9 @@ class FreelanceController {
     try {
       const query = req.query.q as string;
       if (!query || query.trim().length < 2) {
-        return res.status(400).json({ success: false, message: 'La recherche doit contenir au moins 2 caractères' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'La recherche doit contenir au moins 2 caractères' });
       }
 
       const page = parseInt(req.query.page as string) || 1;

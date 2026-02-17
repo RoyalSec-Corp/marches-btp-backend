@@ -4,22 +4,14 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'Email requis' })
-      .email('Email invalide')
-      .toLowerCase(),
-    password: z
-      .string({ required_error: 'Mot de passe requis' })
-      .min(1, 'Mot de passe requis'),
+    email: z.string({ required_error: 'Email requis' }).email('Email invalide').toLowerCase(),
+    password: z.string({ required_error: 'Mot de passe requis' }).min(1, 'Mot de passe requis'),
   }),
 });
 
 export const registerFreelanceSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'Email requis' })
-      .email('Email invalide')
-      .toLowerCase(),
+    email: z.string({ required_error: 'Email requis' }).email('Email invalide').toLowerCase(),
     password: z
       .string({ required_error: 'Mot de passe requis' })
       .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
@@ -37,9 +29,7 @@ export const registerFreelanceSchema = z.object({
     metier: z
       .string({ required_error: 'Métier requis' })
       .min(2, 'Le métier doit contenir au moins 2 caractères'),
-    tarif: z
-      .number({ required_error: 'Tarif requis' })
-      .positive('Le tarif doit être positif'),
+    tarif: z.number({ required_error: 'Tarif requis' }).positive('Le tarif doit être positif'),
     modeTarification: z.enum(['JOUR', 'HEURE', 'FORFAIT']).default('JOUR'),
     siret: z
       .string()
@@ -58,10 +48,7 @@ export const registerFreelanceSchema = z.object({
 
 export const registerEntrepriseSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'Email requis' })
-      .email('Email invalide')
-      .toLowerCase(),
+    email: z.string({ required_error: 'Email requis' }).email('Email invalide').toLowerCase(),
     password: z
       .string({ required_error: 'Mot de passe requis' })
       .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
@@ -100,10 +87,7 @@ export const refreshTokenSchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'Email requis' })
-      .email('Email invalide')
-      .toLowerCase(),
+    email: z.string({ required_error: 'Email requis' }).email('Email invalide').toLowerCase(),
   }),
 });
 

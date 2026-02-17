@@ -44,7 +44,7 @@ class NotificationService {
    */
   async createMany(notifications: CreateNotificationInput[]): Promise<number> {
     const result = await prisma.notification.createMany({
-      data: notifications.map(n => ({
+      data: notifications.map((n) => ({
         destinataireId: n.destinataireId,
         destinataireType: n.destinataireType,
         typeNotification: n.typeNotification,
@@ -59,7 +59,11 @@ class NotificationService {
   /**
    * Récupérer les notifications d'un utilisateur
    */
-  async listByUser(userId: number, page: number = 1, limit: number = 20): Promise<{
+  async listByUser(
+    userId: number,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
     data: any[];
     total: number;
     unreadCount: number;
@@ -205,7 +209,11 @@ class NotificationService {
   /**
    * Notification de nouvelle candidature
    */
-  async notifyNewCandidature(publisherId: number, appelOffreTitle: string, candidatName: string): Promise<any> {
+  async notifyNewCandidature(
+    publisherId: number,
+    appelOffreTitle: string,
+    candidatName: string
+  ): Promise<any> {
     return this.create({
       destinataireId: publisherId,
       destinataireType: 'APPEL_OFFRE',
@@ -218,13 +226,17 @@ class NotificationService {
   /**
    * Notification de candidature acceptée/refusée
    */
-  async notifyCandidatureStatus(candidatId: number, appelOffreTitle: string, accepted: boolean): Promise<any> {
+  async notifyCandidatureStatus(
+    candidatId: number,
+    appelOffreTitle: string,
+    accepted: boolean
+  ): Promise<any> {
     return this.create({
       destinataireId: candidatId,
       destinataireType: 'FREELANCE',
       typeNotification: NotificationType.CANDIDATURE,
       titre: accepted ? 'Candidature acceptée' : 'Candidature refusée',
-      message: accepted 
+      message: accepted
         ? `Félicitations ! Votre candidature pour "${appelOffreTitle}" a été acceptée.`
         : `Votre candidature pour "${appelOffreTitle}" n'a pas été retenue.`,
     });
@@ -233,7 +245,12 @@ class NotificationService {
   /**
    * Notification de nouveau contrat
    */
-  async notifyNewContrat(userId: number, userType: string, contratId: number, contratTitle: string): Promise<any> {
+  async notifyNewContrat(
+    userId: number,
+    userType: string,
+    contratId: number,
+    contratTitle: string
+  ): Promise<any> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
@@ -247,13 +264,19 @@ class NotificationService {
   /**
    * Notification de contrat signé
    */
-  async notifyContratSigned(userId: number, userType: string, contratId: number, contratTitle: string, bothSigned: boolean): Promise<any> {
+  async notifyContratSigned(
+    userId: number,
+    userType: string,
+    contratId: number,
+    contratTitle: string,
+    bothSigned: boolean
+  ): Promise<any> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
       typeNotification: NotificationType.CONTRAT,
       titre: bothSigned ? 'Contrat signé' : 'Signature enregistrée',
-      message: bothSigned 
+      message: bothSigned
         ? `Le contrat "${contratTitle}" a été signé par les deux parties.`
         : `Une signature a été ajoutée au contrat "${contratTitle}".`,
       contratId,
@@ -263,7 +286,12 @@ class NotificationService {
   /**
    * Notification de nouveau message
    */
-  async notifyNewMessage(userId: number, userType: string, senderName: string, contratId?: number): Promise<any> {
+  async notifyNewMessage(
+    userId: number,
+    userType: string,
+    senderName: string,
+    contratId?: number
+  ): Promise<any> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,
@@ -277,7 +305,12 @@ class NotificationService {
   /**
    * Notification système
    */
-  async notifySystem(userId: number, userType: string, titre: string, message: string): Promise<any> {
+  async notifySystem(
+    userId: number,
+    userType: string,
+    titre: string,
+    message: string
+  ): Promise<any> {
     return this.create({
       destinataireId: userId,
       destinataireType: userType,

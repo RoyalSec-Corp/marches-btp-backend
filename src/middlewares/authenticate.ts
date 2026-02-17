@@ -18,7 +18,7 @@ export const authenticate = async (
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
         success: false,
-        message: 'Token d\'authentification manquant',
+        message: "Token d'authentification manquant",
         code: 'MISSING_TOKEN',
       });
       return;
@@ -54,7 +54,7 @@ export const authenticate = async (
 
     res.status(401).json({
       success: false,
-      message: 'Erreur d\'authentification',
+      message: "Erreur d'authentification",
       code: 'AUTH_ERROR',
     });
   }

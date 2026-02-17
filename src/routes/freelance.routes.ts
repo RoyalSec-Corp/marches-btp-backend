@@ -11,12 +11,28 @@ const router = Router();
 // Profil
 router.get('/profile', authenticate, requireFreelance, freelanceController.getMyProfile);
 router.put('/profile', authenticate, requireFreelance, freelanceController.updateMyProfile);
-router.patch('/disponibilite', authenticate, requireFreelance, freelanceController.updateDisponibilite);
+router.patch(
+  '/disponibilite',
+  authenticate,
+  requireFreelance,
+  freelanceController.updateDisponibilite
+);
 
 // Documents (Upload/Download/Delete)
 router.get('/documents', authenticate, requireFreelance, uploadController.getFreelanceDocuments);
-router.post('/documents', authenticate, requireFreelance, uploadFreelanceDocuments, uploadController.uploadFreelanceDocuments);
-router.delete('/documents/:type', authenticate, requireFreelance, uploadController.deleteFreelanceDocument);
+router.post(
+  '/documents',
+  authenticate,
+  requireFreelance,
+  uploadFreelanceDocuments,
+  uploadController.uploadFreelanceDocuments
+);
+router.delete(
+  '/documents/:type',
+  authenticate,
+  requireFreelance,
+  uploadController.deleteFreelanceDocument
+);
 
 // === Routes publiques ===
 router.get('/search', freelanceController.search);

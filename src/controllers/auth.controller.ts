@@ -6,7 +6,6 @@ export const authController = {
   registerFreelance: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await authService.registerFreelance(req.body);
-
       res.status(201).json({
         success: true,
         message: 'Inscription reussie. Votre compte est en attente de validation.',
@@ -28,7 +27,6 @@ export const authController = {
   registerEntreprise: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await authService.registerEntreprise(req.body);
-
       res.status(201).json({
         success: true,
         message: 'Inscription reussie. Votre compte est en attente de validation.',
@@ -51,7 +49,6 @@ export const authController = {
     try {
       const userAgent = req.headers['user-agent'];
       const result = await authService.login(req.body, userAgent);
-
       res.json({
         success: true,
         message: 'Connexion reussie.',
@@ -80,11 +77,9 @@ export const authController = {
   logout: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.body;
-
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-
       res.json({
         success: true,
         message: 'Deconnexion reussie.',
@@ -98,7 +93,6 @@ export const authController = {
   refresh: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.body;
-
       if (!refreshToken) {
         return res.status(400).json({
           success: false,
@@ -106,9 +100,7 @@ export const authController = {
           error: 'MISSING_REFRESH_TOKEN',
         });
       }
-
       const tokens = await authService.refreshTokens(refreshToken);
-
       res.json({
         success: true,
         message: 'Tokens rafraichis.',
@@ -130,7 +122,6 @@ export const authController = {
   getProfile: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?.userId || (req as any).user?.id;
-
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -138,9 +129,7 @@ export const authController = {
           error: 'UNAUTHORIZED',
         });
       }
-
       const profile = await authService.getProfile(userId);
-
       res.json({
         success: true,
         data: profile,
@@ -158,10 +147,9 @@ export const authController = {
   },
 
   // GET /api/auth/verify
-  verifyToken: async (req: Request, res: Response, next: NextFunction) => {
+  verifyToken: async (req: Request, res: Response, _next: NextFunction) => {
     try {
       const userId = (req as any).user?.userId || (req as any).user?.id;
-
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -169,14 +157,12 @@ export const authController = {
           error: 'UNAUTHORIZED',
         });
       }
-
       const user = await authService.verifyToken(userId);
-
       res.json({
         success: true,
         data: user,
       });
-    } catch (error) {
+    } catch {
       return res.status(401).json({
         success: false,
         message: 'Token invalide.',
@@ -189,7 +175,6 @@ export const authController = {
   changePassword: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?.userId || (req as any).user?.id;
-
       if (!userId) {
         return res.status(401).json({
           success: false,
@@ -197,9 +182,7 @@ export const authController = {
           error: 'UNAUTHORIZED',
         });
       }
-
       const { currentPassword, newPassword } = req.body;
-
       if (!currentPassword || !newPassword) {
         return res.status(400).json({
           success: false,
@@ -207,8 +190,6 @@ export const authController = {
           error: 'MISSING_FIELDS',
         });
       }
-
-      // Validation du nouveau mot de passe
       if (newPassword.length < 8) {
         return res.status(400).json({
           success: false,
@@ -216,9 +197,7 @@ export const authController = {
           error: 'WEAK_PASSWORD',
         });
       }
-
       await authService.changePassword(userId, { currentPassword, newPassword });
-
       res.json({
         success: true,
         message: 'Mot de passe modifié avec succès.',
@@ -234,7 +213,7 @@ export const authController = {
       if (error.message === 'SAME_PASSWORD') {
         return res.status(400).json({
           success: false,
-          message: 'Le nouveau mot de passe doit être différent de l\'ancien.',
+          message: "Le nouveau mot de passe doit être différent de l'ancien.",
           error: 'SAME_PASSWORD',
         });
       }
@@ -253,7 +232,6 @@ export const authController = {
   forgotPassword: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email } = req.body;
-
       if (!email) {
         return res.status(400).json({
           success: false,
@@ -261,13 +239,10 @@ export const authController = {
           error: 'MISSING_EMAIL',
         });
       }
-
       const result = await authService.forgotPassword(email);
-
       res.json({
         success: true,
         message: result.message,
-        // En dev, retourner le token pour tester
         ...(result.resetToken && { resetToken: result.resetToken, resetUrl: result.resetUrl }),
       });
     } catch (error) {
@@ -279,7 +254,6 @@ export const authController = {
   resetPassword: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { token, newPassword } = req.body;
-
       if (!token || !newPassword) {
         return res.status(400).json({
           success: false,
@@ -287,8 +261,6 @@ export const authController = {
           error: 'MISSING_FIELDS',
         });
       }
-
-      // Validation du nouveau mot de passe
       if (newPassword.length < 8) {
         return res.status(400).json({
           success: false,
@@ -296,9 +268,7 @@ export const authController = {
           error: 'WEAK_PASSWORD',
         });
       }
-
       const result = await authService.resetPassword({ token, newPassword });
-
       res.json({
         success: true,
         message: result.message,

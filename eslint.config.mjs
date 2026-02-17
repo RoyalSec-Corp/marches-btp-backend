@@ -11,6 +11,19 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      globals: {
+        // Node.js globals
+        console: 'readonly',
+        process: 'readonly',
+        fetch: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+      },
     },
     rules: {
       // TypeScript
@@ -18,7 +31,7 @@ export default tseslint.config(
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      
+
       // General
       'no-console': ['warn', { allow: ['warn', 'error', 'log'] }],
       'prefer-const': 'error',
@@ -27,7 +40,8 @@ export default tseslint.config(
       'curly': ['error', 'all'],
     },
   },
+
   {
-    ignores: ['dist/', 'node_modules/', 'prisma/', '*.config.js', '*.config.mjs'],
+    ignores: ['dist/', 'node_modules/', 'prisma/', '*.config.js', '*.config.mjs', 'tests/'],
   }
 );

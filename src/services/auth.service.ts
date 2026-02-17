@@ -75,14 +75,18 @@ export const authService = {
     const rounds = Number(env.BCRYPT_ROUNDS) || 12;
     const salt = await bcrypt.genSalt(rounds);
     const hash = await bcrypt.hash(password, salt);
-    console.log(`[DEBUG] hashPassword: rounds=${rounds}, password length=${password.length}, hash=${hash.substring(0, 20)}...`);
+    console.log(
+      `[DEBUG] hashPassword: rounds=${rounds}, password length=${password.length}, hash=${hash.substring(0, 20)}...`
+    );
     return hash;
   },
 
   // Verifier le mot de passe
   verifyPassword: async (password: string, hash: string): Promise<boolean> => {
     const result = await bcrypt.compare(password, hash);
-    console.log(`[DEBUG] verifyPassword: password length=${password.length}, hash=${hash.substring(0, 20)}..., result=${result}`);
+    console.log(
+      `[DEBUG] verifyPassword: password length=${password.length}, hash=${hash.substring(0, 20)}..., result=${result}`
+    );
     return result;
   },
 
@@ -277,7 +281,7 @@ export const authService = {
   // Connexion
   login: async (data: LoginDTO, userAgent?: string) => {
     console.log(`[DEBUG] login attempt for: ${data.email}`);
-    
+
     // Trouver l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: data.email },
@@ -409,8 +413,9 @@ export const authService = {
     }
 
     // Ne pas renvoyer le mot de passe
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...rest } = user;
+    return rest;
   },
 
   // Verifier le token (pour les routes protegees)
@@ -438,7 +443,7 @@ export const authService = {
    */
   changePassword: async (userId: number, data: ChangePasswordDTO) => {
     console.log(`[DEBUG] changePassword for userId: ${userId}`);
-    
+
     // Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -474,12 +479,14 @@ export const authService = {
     // Mettre à jour le mot de passe
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         password: hashedPassword,
       },
     });
 
-    console.log(`[DEBUG] password updated in DB, new hash: ${updated.password.substring(0, 20)}...`);
+    console.log(
+      `[DEBUG] password updated in DB, new hash: ${updated.password.substring(0, 20)}...`
+    );
 
     // Vérifier immédiatement que le nouveau mot de passe fonctionne
     const verifyNewPassword = await authService.verifyPassword(data.newPassword, updated.password);
@@ -505,9 +512,9 @@ export const authService = {
     // Ne pas révéler si l'email existe ou non (sécurité)
     if (!user) {
       // On retourne success même si l'email n'existe pas
-      return { 
-        success: true, 
-        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' 
+      return {
+        success: true,
+        message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
       };
     }
 
@@ -545,7 +552,7 @@ export const authService = {
    */
   resetPassword: async (data: ResetPasswordDTO) => {
     console.log(`[DEBUG] resetPassword with token: ${data.token.substring(0, 10)}...`);
-    
+
     // Hasher le token reçu pour comparer avec celui en base
     const hashedToken = crypto.createHash('sha256').update(data.token).digest('hex');
 
@@ -577,7 +584,9 @@ export const authService = {
       },
     });
 
-    console.log(`[DEBUG] password reset complete, new hash: ${updated.password.substring(0, 20)}...`);
+    console.log(
+      `[DEBUG] password reset complete, new hash: ${updated.password.substring(0, 20)}...`
+    );
 
     // Vérifier immédiatement
     const verifyNewPassword = await authService.verifyPassword(data.newPassword, updated.password);
@@ -588,7 +597,7 @@ export const authService = {
       where: { userId: user.id },
     });
 
-    return { 
+    return {
       success: true,
       message: 'Mot de passe réinitialisé avec succès. Veuillez vous reconnecter.',
     };

@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
     // Gestion de l'arrêt gracieux
     const shutdown = async (signal: string) => {
       console.log(`\n📥 Signal ${signal} reçu. Arrêt en cours...`);
-      
+
       server.close(async () => {
         await disconnectDatabase();
         console.log('👋 Serveur arrêté proprement');
@@ -42,7 +42,6 @@ async function bootstrap(): Promise<void> {
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
-
   } catch (error) {
     console.error('❌ Erreur au démarrage:', error);
     process.exit(1);

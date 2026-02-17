@@ -12,7 +12,9 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // Etendre le type Request pour inclure user
+
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: {
@@ -29,18 +31,14 @@ declare global {
  * Middleware d'authentification JWT
  * Verifie le token dans le header Authorization
  */
-export const authenticate = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'Token d\'authentification requis.',
+        message: "Token d'authentification requis.",
         error: 'MISSING_TOKEN',
       });
     }
@@ -57,7 +55,7 @@ export const authenticate = async (
         userType: payload.userType,
       };
       next();
-    } catch (error) {
+    } catch {
       return res.status(401).json({
         success: false,
         message: 'Token invalide ou expire.',
@@ -73,11 +71,7 @@ export const authenticate = async (
  * Middleware optionnel d'authentification
  * Ne bloque pas si pas de token, mais ajoute user si present
  */
-export const optionalAuth = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -91,7 +85,7 @@ export const optionalAuth = async (
           email: payload.email,
           userType: payload.userType,
         };
-      } catch (error) {
+      } catch {
         // Token invalide, on continue sans user
       }
     }

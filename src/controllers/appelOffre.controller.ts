@@ -13,7 +13,17 @@ class AppelOffreController {
         return res.status(401).json({ success: false, message: 'Non authentifié' });
       }
 
-      const { titre, description, budget, ville, typeConstruction, secteur, cible, dateLimite, typePersonne } = req.body;
+      const {
+        titre,
+        description,
+        budget,
+        ville,
+        typeConstruction,
+        secteur,
+        cible,
+        dateLimite,
+        typePersonne,
+      } = req.body;
 
       if (!titre) {
         return res.status(400).json({ success: false, message: 'Le titre est requis' });
@@ -46,14 +56,18 @@ class AppelOffreController {
       const limit = parseInt(req.query.limit as string) || 10;
       const localisation = req.query.localisation as string;
       const type_construction = req.query.type_construction as string;
-      const budget_min = req.query.budget_min ? parseFloat(req.query.budget_min as string) : undefined;
-      const budget_max = req.query.budget_max ? parseFloat(req.query.budget_max as string) : undefined;
+      const budget_min = req.query.budget_min
+        ? parseFloat(req.query.budget_min as string)
+        : undefined;
+      const budget_max = req.query.budget_max
+        ? parseFloat(req.query.budget_max as string)
+        : undefined;
       const publisher_only = req.query.publisher_only === 'true';
 
       let mots_cles: string[] | undefined;
       if (req.query.mots_cles) {
         mots_cles = Array.isArray(req.query.mots_cles)
-          ? req.query.mots_cles as string[]
+          ? (req.query.mots_cles as string[])
           : [req.query.mots_cles as string];
       }
 
@@ -99,7 +113,7 @@ class AppelOffreController {
 
       const appel = await appelOffreService.findById(id);
       if (!appel) {
-        return res.status(404).json({ success: false, message: 'Appel d\'offre non trouvé' });
+        return res.status(404).json({ success: false, message: "Appel d'offre non trouvé" });
       }
 
       res.json({ success: true, data: appel });
@@ -138,7 +152,9 @@ class AppelOffreController {
         return res.status(404).json({ success: false, message: error.message });
       }
       if (error.code === 'P2002') {
-        return res.status(409).json({ success: false, message: 'Vous avez déjà postulé à cet appel d\'offre' });
+        return res
+          .status(409)
+          .json({ success: false, message: "Vous avez déjà postulé à cet appel d'offre" });
       }
       next(error);
     }

@@ -14,11 +14,7 @@ export class ApiError extends Error implements AppError {
   code: string;
   isOperational: boolean;
 
-  constructor(
-    message: string,
-    statusCode: number = 500,
-    code: string = 'INTERNAL_ERROR'
-  ) {
+  constructor(message: string, statusCode: number = 500, code: string = 'INTERNAL_ERROR') {
     super(message);
     this.statusCode = statusCode;
     this.code = code;

@@ -14,8 +14,19 @@ router.put('/profile', authenticate, requireEntreprise, entrepriseController.upd
 
 // Documents (Upload/Download/Delete)
 router.get('/documents', authenticate, requireEntreprise, uploadController.getEntrepriseDocuments);
-router.post('/documents', authenticate, requireEntreprise, uploadEntrepriseDocuments, uploadController.uploadEntrepriseDocuments);
-router.delete('/documents/:type', authenticate, requireEntreprise, uploadController.deleteEntrepriseDocument);
+router.post(
+  '/documents',
+  authenticate,
+  requireEntreprise,
+  uploadEntrepriseDocuments,
+  uploadController.uploadEntrepriseDocuments
+);
+router.delete(
+  '/documents/:type',
+  authenticate,
+  requireEntreprise,
+  uploadController.deleteEntrepriseDocument
+);
 
 // === Routes publiques ===
 router.get('/search', entrepriseController.search);

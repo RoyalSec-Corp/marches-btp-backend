@@ -161,7 +161,9 @@ class EntrepriseController {
     try {
       const query = req.query.q as string;
       if (!query || query.trim().length < 2) {
-        return res.status(400).json({ success: false, message: 'La recherche doit contenir au moins 2 caractères' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'La recherche doit contenir au moins 2 caractères' });
       }
 
       const page = parseInt(req.query.page as string) || 1;

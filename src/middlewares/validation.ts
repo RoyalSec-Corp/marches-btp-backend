@@ -77,15 +77,16 @@ export const telephoneValidator = body('telephone')
   .withMessage('Numéro de téléphone invalide');
 
 // ID en paramètre URL
-export const idParamValidator = param('id')
-  .isInt({ min: 1 })
-  .withMessage('ID invalide')
-  .toInt();
+export const idParamValidator = param('id').isInt({ min: 1 }).withMessage('ID invalide').toInt();
 
 // Pagination
 export const paginationValidators = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page invalide').toInt(),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limite invalide (1-100)').toInt(),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limite invalide (1-100)')
+    .toInt(),
 ];
 
 // String requis
@@ -96,7 +97,11 @@ export const requiredString = (field: string, label: string) =>
 export const optionalString = (field: string) => body(field).optional().trim();
 
 // Nombre requis
-export const requiredNumber = (field: string, label: string, options?: { min?: number; max?: number }) =>
+export const requiredNumber = (
+  field: string,
+  label: string,
+  options?: { min?: number; max?: number }
+) =>
   body(field)
     .notEmpty()
     .withMessage(`${label} est requis`)
@@ -123,14 +128,19 @@ export const registerValidation = validate([
   passwordValidator,
   body('userType')
     .notEmpty()
-    .withMessage('Type d\'utilisateur requis')
+    .withMessage("Type d'utilisateur requis")
     .isIn(['FREELANCE', 'ENTREPRISE', 'APPEL_OFFRE'])
-    .withMessage('Type d\'utilisateur invalide'),
+    .withMessage("Type d'utilisateur invalide"),
 ]);
 
 // Connexion
 export const loginValidation = validate([
-  body('email').trim().notEmpty().withMessage('Email requis').isEmail().withMessage('Email invalide'),
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email requis')
+    .isEmail()
+    .withMessage('Email invalide'),
   body('password').notEmpty().withMessage('Mot de passe requis'),
 ]);
 
@@ -139,7 +149,7 @@ export const freelanceValidation = validate([
   requiredString('nom', 'Nom'),
   requiredString('prenom', 'Prénom'),
   siretValidator,
-  requiredString('secteur', 'Secteur d\'activité'),
+  requiredString('secteur', "Secteur d'activité"),
   requiredNumber('dailyRate', 'Tarif journalier', { min: 0 }),
   requiredString('adresse', 'Adresse'),
   requiredString('ville', 'Ville'),
@@ -149,13 +159,9 @@ export const freelanceValidation = validate([
 
 // Profil entreprise
 export const entrepriseValidation = validate([
-  requiredString('nomEntreprise', 'Nom de l\'entreprise'),
+  requiredString('nomEntreprise', "Nom de l'entreprise"),
   siretValidator,
-  body('nafCode')
-    .optional()
-    .trim()
-    .matches(REGEX.NAF)
-    .withMessage('Code NAF invalide (ex: 4120A)'),
+  body('nafCode').optional().trim().matches(REGEX.NAF).withMessage('Code NAF invalide (ex: 4120A)'),
   requiredString('adresse', 'Adresse'),
   requiredString('ville', 'Ville'),
   codePostalValidator,

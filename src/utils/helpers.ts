@@ -64,12 +64,7 @@ export function formatSiret(siret: string): string {
  * Calcule la distance entre deux coordonnées GPS (formule Haversine)
  * @returns Distance en kilomètres
  */
-export function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Rayon de la Terre en km
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);

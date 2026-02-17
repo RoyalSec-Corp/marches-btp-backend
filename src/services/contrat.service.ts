@@ -36,7 +36,7 @@ class ContratService {
   /**
    * Créer un nouveau contrat
    */
-  async create(data: CreateContratInput, creatorId: number): Promise<any> {
+  async create(data: CreateContratInput, _creatorId: number): Promise<any> {
     // Vérifier que l'entreprise existe
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: data.entrepriseId },
@@ -118,7 +118,11 @@ class ContratService {
   /**
    * Lister les contrats avec filtres et pagination
    */
-  async list(filters: ContratFilters, page: number = 1, limit: number = 10): Promise<{
+  async list(
+    filters: ContratFilters,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
     data: any[];
     total: number;
     page: number;
@@ -126,14 +130,26 @@ class ContratService {
   }> {
     const where: Prisma.ContratWhereInput = {};
 
-    if (filters.statut) where.statut = filters.statut;
-    if (filters.entrepriseId) where.entrepriseId = filters.entrepriseId;
-    if (filters.freelanceId) where.freelanceId = filters.freelanceId;
-    if (filters.appelOffreId) where.appelOffreId = filters.appelOffreId;
+    if (filters.statut) {
+      where.statut = filters.statut;
+    }
+    if (filters.entrepriseId) {
+      where.entrepriseId = filters.entrepriseId;
+    }
+    if (filters.freelanceId) {
+      where.freelanceId = filters.freelanceId;
+    }
+    if (filters.appelOffreId) {
+      where.appelOffreId = filters.appelOffreId;
+    }
     if (filters.dateDebutFrom || filters.dateDebutTo) {
       where.dateDebut = {};
-      if (filters.dateDebutFrom) where.dateDebut.gte = filters.dateDebutFrom;
-      if (filters.dateDebutTo) where.dateDebut.lte = filters.dateDebutTo;
+      if (filters.dateDebutFrom) {
+        where.dateDebut.gte = filters.dateDebutFrom;
+      }
+      if (filters.dateDebutTo) {
+        where.dateDebut.lte = filters.dateDebutTo;
+      }
     }
 
     const [data, total] = await Promise.all([
@@ -170,8 +186,13 @@ class ContratService {
    * Récupérer les contrats d'un utilisateur (freelance ou entreprise)
    * Retourne liste vide si le profil n'existe pas encore
    */
-  async listByUser(userId: number, userType: 'FREELANCE' | 'ENTREPRISE', page: number = 1, limit: number = 10): Promise<any> {
-    let where: Prisma.ContratWhereInput = {};
+  async listByUser(
+    userId: number,
+    userType: 'FREELANCE' | 'ENTREPRISE',
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any> {
+    const where: Prisma.ContratWhereInput = {};
 
     if (userType === 'FREELANCE') {
       const freelance = await prisma.freelance.findUnique({ where: { userId } });
@@ -249,7 +270,7 @@ class ContratService {
     }
 
     if (contrat.statut !== ContratStatus.EN_ATTENTE) {
-      throw new Error('Ce contrat n\'est pas en attente de signature');
+      throw new Error("Ce contrat n'est pas en attente de signature");
     }
 
     // Déterminer le type de signataire
@@ -259,11 +280,11 @@ class ContratService {
     } else if (contrat.entreprise.userId === userId) {
       signerType = 'ENTREPRISE';
     } else {
-      throw new Error('Vous n\'êtes pas autorisé à signer ce contrat');
+      throw new Error("Vous n'êtes pas autorisé à signer ce contrat");
     }
 
     // Vérifier si déjà signé
-    const existingSignature = contrat.signatures.find(s => s.signerType === signerType);
+    const existingSignature = contrat.signatures.find((s) => s.signerType === signerType);
     if (existingSignature) {
       throw new Error('Vous avez déjà signé ce contrat');
     }
@@ -363,7 +384,9 @@ class ContratService {
       where: { id },
       data: {
         statut: ContratStatus.ANNULE,
-        description: reason ? `${contrat.description || ''}\n\n[ANNULATION] ${reason}` : contrat.description,
+        description: reason
+          ? `${contrat.description || ''}\n\n[ANNULATION] ${reason}`
+          : contrat.description,
       },
     });
   }
@@ -372,15 +395,19 @@ class ContratService {
    * Obtenir les statistiques des contrats
    */
   async getStats(userId?: number, userType?: 'FREELANCE' | 'ENTREPRISE'): Promise<any> {
-    let where: Prisma.ContratWhereInput = {};
+    const where: Prisma.ContratWhereInput = {};
 
     if (userId && userType) {
       if (userType === 'FREELANCE') {
         const freelance = await prisma.freelance.findUnique({ where: { userId } });
-        if (freelance) where.freelanceId = freelance.id;
+        if (freelance) {
+          where.freelanceId = freelance.id;
+        }
       } else {
         const entreprise = await prisma.entreprise.findUnique({ where: { userId } });
-        if (entreprise) where.entrepriseId = entreprise.id;
+        if (entreprise) {
+          where.entrepriseId = entreprise.id;
+        }
       }
     }
 
@@ -398,8 +425,12 @@ class ContratService {
       total,
       enCours,
       termines,
-      enAttente: await prisma.contrat.count({ where: { ...where, statut: ContratStatus.EN_ATTENTE } }),
-      brouillons: await prisma.contrat.count({ where: { ...where, statut: ContratStatus.BROUILLON } }),
+      enAttente: await prisma.contrat.count({
+        where: { ...where, statut: ContratStatus.EN_ATTENTE },
+      }),
+      brouillons: await prisma.contrat.count({
+        where: { ...where, statut: ContratStatus.BROUILLON },
+      }),
       montantTotal: montantTotal._sum.montant || 0,
     };
   }
